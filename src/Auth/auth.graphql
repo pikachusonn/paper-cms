@@ -1,0 +1,8 @@
+type AuthQuery {
+    accounts: [Account!]!
+    account(id: ID!): Account!
+}
+
+extend type Query {
+    auth: AuthQuery!
+}

@@ -1,0 +1,16 @@
+scalar DateTime
+
+type Account {
+    id: ID!
+    email: String!
+    password: String!
+    createdAt: DateTime
+    avatar: String
+}
+
+type Query {
+    accounts: [Account!]!
+    account(id: ID!): Account!
+}
+
+
