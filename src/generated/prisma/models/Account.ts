@@ -30,6 +30,7 @@ export type AccountMinAggregateOutputType = {
   password: string | null
   createdAt: Date | null
   avatar: string | null
+  role: $Enums.Role | null
 }
 
 export type AccountMaxAggregateOutputType = {
@@ -38,6 +39,7 @@ export type AccountMaxAggregateOutputType = {
   password: string | null
   createdAt: Date | null
   avatar: string | null
+  role: $Enums.Role | null
 }
 
 export type AccountCountAggregateOutputType = {
@@ -46,6 +48,7 @@ export type AccountCountAggregateOutputType = {
   password: number
   createdAt: number
   avatar: number
+  role: number
   _all: number
 }
 
@@ -56,6 +59,7 @@ export type AccountMinAggregateInputType = {
   password?: true
   createdAt?: true
   avatar?: true
+  role?: true
 }
 
 export type AccountMaxAggregateInputType = {
@@ -64,6 +68,7 @@ export type AccountMaxAggregateInputType = {
   password?: true
   createdAt?: true
   avatar?: true
+  role?: true
 }
 
 export type AccountCountAggregateInputType = {
@@ -72,6 +77,7 @@ export type AccountCountAggregateInputType = {
   password?: true
   createdAt?: true
   avatar?: true
+  role?: true
   _all?: true
 }
 
@@ -153,6 +159,7 @@ export type AccountGroupByOutputType = {
   password: string
   createdAt: Date
   avatar: string | null
+  role: $Enums.Role
   _count: AccountCountAggregateOutputType | null
   _min: AccountMinAggregateOutputType | null
   _max: AccountMaxAggregateOutputType | null
@@ -182,6 +189,7 @@ export type AccountWhereInput = {
   password?: Prisma.StringFilter<"Account"> | string
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   avatar?: Prisma.StringNullableFilter<"Account"> | string | null
+  role?: Prisma.EnumRoleFilter<"Account"> | $Enums.Role
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -190,6 +198,7 @@ export type AccountOrderByWithRelationInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   avatar?: Prisma.SortOrderInput | Prisma.SortOrder
+  role?: Prisma.SortOrder
   _relevance?: Prisma.AccountOrderByRelevanceInput
 }
 
@@ -202,6 +211,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   password?: Prisma.StringFilter<"Account"> | string
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   avatar?: Prisma.StringNullableFilter<"Account"> | string | null
+  role?: Prisma.EnumRoleFilter<"Account"> | $Enums.Role
 }, "id" | "email">
 
 export type AccountOrderByWithAggregationInput = {
@@ -210,6 +220,7 @@ export type AccountOrderByWithAggregationInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   avatar?: Prisma.SortOrderInput | Prisma.SortOrder
+  role?: Prisma.SortOrder
   _count?: Prisma.AccountCountOrderByAggregateInput
   _max?: Prisma.AccountMaxOrderByAggregateInput
   _min?: Prisma.AccountMinOrderByAggregateInput
@@ -224,6 +235,7 @@ export type AccountScalarWhereWithAggregatesInput = {
   password?: Prisma.StringWithAggregatesFilter<"Account"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Account"> | Date | string
   avatar?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
+  role?: Prisma.EnumRoleWithAggregatesFilter<"Account"> | $Enums.Role
 }
 
 export type AccountCreateInput = {
@@ -232,6 +244,7 @@ export type AccountCreateInput = {
   password: string
   createdAt?: Date | string
   avatar?: string | null
+  role?: $Enums.Role
 }
 
 export type AccountUncheckedCreateInput = {
@@ -240,6 +253,7 @@ export type AccountUncheckedCreateInput = {
   password: string
   createdAt?: Date | string
   avatar?: string | null
+  role?: $Enums.Role
 }
 
 export type AccountUpdateInput = {
@@ -248,6 +262,7 @@ export type AccountUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -256,6 +271,7 @@ export type AccountUncheckedUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
 }
 
 export type AccountCreateManyInput = {
@@ -264,6 +280,7 @@ export type AccountCreateManyInput = {
   password: string
   createdAt?: Date | string
   avatar?: string | null
+  role?: $Enums.Role
 }
 
 export type AccountUpdateManyMutationInput = {
@@ -272,6 +289,7 @@ export type AccountUpdateManyMutationInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
 }
 
 export type AccountUncheckedUpdateManyInput = {
@@ -280,6 +298,7 @@ export type AccountUncheckedUpdateManyInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
 }
 
 export type AccountOrderByRelevanceInput = {
@@ -294,6 +313,7 @@ export type AccountCountOrderByAggregateInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   avatar?: Prisma.SortOrder
+  role?: Prisma.SortOrder
 }
 
 export type AccountMaxOrderByAggregateInput = {
@@ -302,6 +322,7 @@ export type AccountMaxOrderByAggregateInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   avatar?: Prisma.SortOrder
+  role?: Prisma.SortOrder
 }
 
 export type AccountMinOrderByAggregateInput = {
@@ -310,6 +331,7 @@ export type AccountMinOrderByAggregateInput = {
   password?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   avatar?: Prisma.SortOrder
+  role?: Prisma.SortOrder
 }
 
 export type StringFieldUpdateOperationsInput = {
@@ -324,6 +346,10 @@ export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
+export type EnumRoleFieldUpdateOperationsInput = {
+  set?: $Enums.Role
+}
+
 
 
 export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -332,6 +358,7 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   password?: boolean
   createdAt?: boolean
   avatar?: boolean
+  role?: boolean
 }, ExtArgs["result"]["account"]>
 
 
@@ -342,9 +369,10 @@ export type AccountSelectScalar = {
   password?: boolean
   createdAt?: boolean
   avatar?: boolean
+  role?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "createdAt" | "avatar", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "createdAt" | "avatar" | "role", ExtArgs["result"]["account"]>
 
 export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Account"
@@ -355,6 +383,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     password: string
     createdAt: Date
     avatar: string | null
+    role: $Enums.Role
   }, ExtArgs["result"]["account"]>
   composites: {}
 }
@@ -729,6 +758,7 @@ export interface AccountFieldRefs {
   readonly password: Prisma.FieldRef<"Account", 'String'>
   readonly createdAt: Prisma.FieldRef<"Account", 'DateTime'>
   readonly avatar: Prisma.FieldRef<"Account", 'String'>
+  readonly role: Prisma.FieldRef<"Account", 'Role'>
 }
     
 

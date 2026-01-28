@@ -1,4 +1,4 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { AccountService } from './account.service.js';
 
 @Resolver()
@@ -13,5 +13,10 @@ export class AccountResolver {
   @Query()
   account(@Args('id') id: string) {
     return this.accountService.findAccountById(id);
+  }
+
+  @Mutation('login')
+  login(@Args('loginRequest') loginRequest: any) {
+    return this.accountService.login(loginRequest);
   }
 }

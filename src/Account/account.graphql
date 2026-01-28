@@ -1,16 +1,38 @@
 scalar DateTime
 
+enum Role {
+    ADMIN
+    STAFF
+}
+
+input LoginRequest {
+    email: String!
+    password: String!
+}
+
 type Account {
     id: ID!
     email: String!
     password: String!
     createdAt: DateTime
     avatar: String
+    role: Role!
+}
+
+type LoginResponse {
+    accessToken: String!
+    refreshToken: String!
+    account: Account!
 }
 
 type Query {
     accounts: [Account!]!
     account(id: ID!): Account!
 }
+
+type Mutation {
+    login(loginRequest: LoginRequest!): LoginResponse!
+}
+
 
 

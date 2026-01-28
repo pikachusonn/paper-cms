@@ -16,4 +16,12 @@ export class AccountRepository {
       },
     });
   }
+
+  async findAccountByEmail(email: string) {
+    return await this.prisma.account.findUnique({
+      where: {
+        email,
+      },
+    });
+  }
 }

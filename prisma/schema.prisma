@@ -7,10 +7,16 @@ datasource db {
     provider = "mysql"
 }
 
+enum Role {
+    ADMIN
+    STAFF
+}
+
 model Account {
     id String @id @default(uuid())
     email String @unique
     password String
     createdAt DateTime @default(now())
     avatar String?
+    role Role @default(STAFF)
 }
