@@ -12,6 +12,12 @@ enum Role {
     STAFF
 }
 
+enum DocumentStatus {
+    PENDING
+    PROCESSED
+    FINISHED
+}
+
 model Account {
     id String @id @default(uuid())
     email String @unique
@@ -19,4 +25,60 @@ model Account {
     createdAt DateTime @default(now())
     avatar String?
     role Role @default(STAFF)
+}
+
+model Court {
+    id String @id @default(uuid())
+    name String
+    address String
+    phone String?
+    email String?
+    staff CourtStaff[]
+    isDeleted Boolean @default(false)
+    courtNumber Int
+    documentList DocumentList[]
+    document Document[]
+}
+
+model CourtStaff {
+    id String @id @default(uuid())
+    courtId String
+    court Court @relation(fields: [courtId], references: [id])
+    name String
+    phone String?
+    avatar String?
+    socialId String?
+    email String?
+    isDeleted Boolean @default(false)
+    document Document[]
+    operatingArea String
+}
+
+model DocumentList {
+    id String @id @default(uuid())
+    sendByCourtId String
+    sentByCourt Court @relation(fields: [sendByCourtId], references: [id])
+    sentAt String
+    fileUrl String
+}
+
+model Document {
+    id String @id @default(uuid())
+    receivedDate String
+    documentCode String
+    content String
+    processProof String //file url
+    processAddress String
+    processDeadline String
+    processStatus DocumentStatus @default(PENDING)
+    pricePerDocument Int
+    travelDistance Int?
+    gasFee Int?
+    innerTotalPrice Int?
+    outerTotalPrice Int?
+    courtStaffId String?
+    courtStaff CourtStaff? @relation(fields: [courtStaffId], references: [id])
+    note String?
+    courtId String
+    court Court @relation(fields: [courtId], references: [id])
 }

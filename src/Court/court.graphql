@@ -1,0 +1,28 @@
+
+
+scalar DateTime
+
+type Court {
+  id: ID!
+  name: String!
+  address: String!
+  phone: String
+  email: String
+  courtNumber: Int!
+  isDeleted: Boolean!
+  staff: [CourtStaff!]!
+  documentList: [DocumentList!]!
+  document: [Document!]!
+}
+
+extend type Query {
+  courts(courtFilter: CourtFilter): [Court!]!
+  court(id: ID!): Court!
+}
+
+input CourtFilter {
+  startDate: DateTime
+  endDate: DateTime
+  documentStatus: DocumentStatus
+}
+

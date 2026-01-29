@@ -1,0 +1,20 @@
+type CourtStaff {
+  id: ID!
+  court: Court!
+
+  name: String!
+  phone: String
+  avatar: String
+  socialId: String
+  email: String
+  operatingArea: String!
+
+  isDeleted: Boolean!
+  document: [Document!]!
+}
+
+extend type Query {
+  courtStaffs: [CourtStaff!]!
+  courtStaff(id: ID!): CourtStaff!
+}
+

@@ -2,6 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { ValidationPipe } from '@nestjs/common';
 import { GqlGlobalExceptionFilter } from './exception/global-exception.filter.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { express: voyagerMiddleware } = require('graphql-voyager/middleware');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,7 +23,14 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new GqlGlobalExceptionFilter());
+  app.use(
+    '/voyager',
+    voyagerMiddleware({
+      endpointUrl: '/graphql',
+    }),
+  );
+
+  // app.useGlobalFilters(new GqlGlobalExceptionFilter());
   await app.listen(process.env.PORT ?? 3000);
 }
 

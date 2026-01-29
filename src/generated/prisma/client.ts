@@ -44,3 +44,23 @@ export { Prisma }
  * 
  */
 export type Account = Prisma.AccountModel
+/**
+ * Model Court
+ * 
+ */
+export type Court = Prisma.CourtModel
+/**
+ * Model CourtStaff
+ * 
+ */
+export type CourtStaff = Prisma.CourtStaffModel
+/**
+ * Model DocumentList
+ * 
+ */
+export type DocumentList = Prisma.DocumentListModel
+/**
+ * Model Document
+ * 
+ */
+export type Document = Prisma.DocumentModel

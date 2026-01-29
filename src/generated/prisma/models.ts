@@ -9,4 +9,8 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/Account.js'
+export type * from './models/Court.js'
+export type * from './models/CourtStaff.js'
+export type * from './models/DocumentList.js'
+export type * from './models/Document.js'
 export type * from './commonInputTypes.js'

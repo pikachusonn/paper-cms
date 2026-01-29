@@ -26,9 +26,14 @@ type LoginResponse {
 }
 
 type Query {
+  _empty: String
+}
+
+extend type Query {
     accounts: [Account!]!
     account(id: ID!): Account!
 }
+
 
 type Mutation {
     login(loginRequest: LoginRequest!): LoginResponse!

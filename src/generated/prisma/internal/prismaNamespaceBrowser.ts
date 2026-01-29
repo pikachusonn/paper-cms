@@ -51,7 +51,11 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  Account: 'Account'
+  Account: 'Account',
+  Court: 'Court',
+  CourtStaff: 'CourtStaff',
+  DocumentList: 'DocumentList',
+  Document: 'Document'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -82,6 +86,66 @@ export const AccountScalarFieldEnum = {
 export type AccountScalarFieldEnum = (typeof AccountScalarFieldEnum)[keyof typeof AccountScalarFieldEnum]
 
 
+export const CourtScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  address: 'address',
+  phone: 'phone',
+  email: 'email',
+  isDeleted: 'isDeleted',
+  courtNumber: 'courtNumber'
+} as const
+
+export type CourtScalarFieldEnum = (typeof CourtScalarFieldEnum)[keyof typeof CourtScalarFieldEnum]
+
+
+export const CourtStaffScalarFieldEnum = {
+  id: 'id',
+  courtId: 'courtId',
+  name: 'name',
+  phone: 'phone',
+  avatar: 'avatar',
+  socialId: 'socialId',
+  email: 'email',
+  isDeleted: 'isDeleted',
+  operatingArea: 'operatingArea'
+} as const
+
+export type CourtStaffScalarFieldEnum = (typeof CourtStaffScalarFieldEnum)[keyof typeof CourtStaffScalarFieldEnum]
+
+
+export const DocumentListScalarFieldEnum = {
+  id: 'id',
+  sendByCourtId: 'sendByCourtId',
+  sentAt: 'sentAt',
+  fileUrl: 'fileUrl'
+} as const
+
+export type DocumentListScalarFieldEnum = (typeof DocumentListScalarFieldEnum)[keyof typeof DocumentListScalarFieldEnum]
+
+
+export const DocumentScalarFieldEnum = {
+  id: 'id',
+  receivedDate: 'receivedDate',
+  documentCode: 'documentCode',
+  content: 'content',
+  processProof: 'processProof',
+  processAddress: 'processAddress',
+  processDeadline: 'processDeadline',
+  processStatus: 'processStatus',
+  pricePerDocument: 'pricePerDocument',
+  travelDistance: 'travelDistance',
+  gasFee: 'gasFee',
+  innerTotalPrice: 'innerTotalPrice',
+  outerTotalPrice: 'outerTotalPrice',
+  courtStaffId: 'courtStaffId',
+  note: 'note',
+  courtId: 'courtId'
+} as const
+
+export type DocumentScalarFieldEnum = (typeof DocumentScalarFieldEnum)[keyof typeof DocumentScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -106,4 +170,55 @@ export const AccountOrderByRelevanceFieldEnum = {
 } as const
 
 export type AccountOrderByRelevanceFieldEnum = (typeof AccountOrderByRelevanceFieldEnum)[keyof typeof AccountOrderByRelevanceFieldEnum]
+
+
+export const CourtOrderByRelevanceFieldEnum = {
+  id: 'id',
+  name: 'name',
+  address: 'address',
+  phone: 'phone',
+  email: 'email'
+} as const
+
+export type CourtOrderByRelevanceFieldEnum = (typeof CourtOrderByRelevanceFieldEnum)[keyof typeof CourtOrderByRelevanceFieldEnum]
+
+
+export const CourtStaffOrderByRelevanceFieldEnum = {
+  id: 'id',
+  courtId: 'courtId',
+  name: 'name',
+  phone: 'phone',
+  avatar: 'avatar',
+  socialId: 'socialId',
+  email: 'email',
+  operatingArea: 'operatingArea'
+} as const
+
+export type CourtStaffOrderByRelevanceFieldEnum = (typeof CourtStaffOrderByRelevanceFieldEnum)[keyof typeof CourtStaffOrderByRelevanceFieldEnum]
+
+
+export const DocumentListOrderByRelevanceFieldEnum = {
+  id: 'id',
+  sendByCourtId: 'sendByCourtId',
+  sentAt: 'sentAt',
+  fileUrl: 'fileUrl'
+} as const
+
+export type DocumentListOrderByRelevanceFieldEnum = (typeof DocumentListOrderByRelevanceFieldEnum)[keyof typeof DocumentListOrderByRelevanceFieldEnum]
+
+
+export const DocumentOrderByRelevanceFieldEnum = {
+  id: 'id',
+  receivedDate: 'receivedDate',
+  documentCode: 'documentCode',
+  content: 'content',
+  processProof: 'processProof',
+  processAddress: 'processAddress',
+  processDeadline: 'processDeadline',
+  courtStaffId: 'courtStaffId',
+  note: 'note',
+  courtId: 'courtId'
+} as const
+
+export type DocumentOrderByRelevanceFieldEnum = (typeof DocumentOrderByRelevanceFieldEnum)[keyof typeof DocumentOrderByRelevanceFieldEnum]
 

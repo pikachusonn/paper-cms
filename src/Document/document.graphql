@@ -1,0 +1,41 @@
+enum DocumentStatus {
+  PENDING
+  PROCESSED
+  FINISHED
+}
+
+type Document {
+  id: ID!
+  receivedDate: String!
+  documentCode: String!
+  content: String!
+  processProof: String!
+  processAddress: String!
+  processDeadline: String!
+  processStatus: DocumentStatus!
+  pricePerDocument: Int!
+  travelDistance: Int
+  gasFee: Int
+  innerTotalPrice: Int
+  outerTotalPrice: Int
+  courtStaff: CourtStaff
+  note: String
+  court: Court!
+
+  isLate: Boolean!
+}
+
+type DocumentList {
+  id: ID!
+  sentByCourt: Court!
+  sentAt: String!
+  fileUrl: String!
+}
+
+extend type Query {
+  documents: [Document!]!
+  documentsByCourtId(courtId: ID!): [Document!]!
+  document(id: ID!): Document!
+  documentLists: [DocumentList!]!
+}
+

@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.3.0",
   "engineVersion": "9d6ad21cbbceab97458517b147a6a09ff43aa735",
   "activeProvider": "mysql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n}\n\nenum Role {\n  ADMIN\n  STAFF\n}\n\nmodel Account {\n  id        String   @id @default(uuid())\n  email     String   @unique\n  password  String\n  createdAt DateTime @default(now())\n  avatar    String?\n  role      Role     @default(STAFF)\n}\n",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n}\n\nenum Role {\n  ADMIN\n  STAFF\n}\n\nenum DocumentStatus {\n  PENDING\n  PROCESSED\n  FINISHED\n}\n\nmodel Account {\n  id        String   @id @default(uuid())\n  email     String   @unique\n  password  String\n  createdAt DateTime @default(now())\n  avatar    String?\n  role      Role     @default(STAFF)\n}\n\nmodel Court {\n  id           String         @id @default(uuid())\n  name         String\n  address      String\n  phone        String?\n  email        String?\n  staff        CourtStaff[]\n  isDeleted    Boolean        @default(false)\n  courtNumber  Int\n  documentList DocumentList[]\n  document     Document[]\n}\n\nmodel CourtStaff {\n  id            String     @id @default(uuid())\n  courtId       String\n  court         Court      @relation(fields: [courtId], references: [id])\n  name          String\n  phone         String?\n  avatar        String?\n  socialId      String?\n  email         String?\n  isDeleted     Boolean    @default(false)\n  document      Document[]\n  operatingArea String\n}\n\nmodel DocumentList {\n  id            String @id @default(uuid())\n  sendByCourtId String\n  sentByCourt   Court  @relation(fields: [sendByCourtId], references: [id])\n  sentAt        String\n  fileUrl       String\n}\n\nmodel Document {\n  id               String         @id @default(uuid())\n  receivedDate     String\n  documentCode     String\n  content          String\n  processProof     String //file url\n  processAddress   String\n  processDeadline  String\n  processStatus    DocumentStatus @default(PENDING)\n  pricePerDocument Int\n  travelDistance   Int?\n  gasFee           Int?\n  innerTotalPrice  Int?\n  outerTotalPrice  Int?\n  courtStaffId     String?\n  courtStaff       CourtStaff?    @relation(fields: [courtStaffId], references: [id])\n  note             String?\n  courtId          String\n  court            Court          @relation(fields: [courtId], references: [id])\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"avatar\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"Role\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"avatar\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"Role\"}],\"dbName\":null},\"Court\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"address\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"staff\",\"kind\":\"object\",\"type\":\"CourtStaff\",\"relationName\":\"CourtToCourtStaff\"},{\"name\":\"isDeleted\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"courtNumber\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"documentList\",\"kind\":\"object\",\"type\":\"DocumentList\",\"relationName\":\"CourtToDocumentList\"},{\"name\":\"document\",\"kind\":\"object\",\"type\":\"Document\",\"relationName\":\"CourtToDocument\"}],\"dbName\":null},\"CourtStaff\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"courtId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"court\",\"kind\":\"object\",\"type\":\"Court\",\"relationName\":\"CourtToCourtStaff\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"avatar\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"socialId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"isDeleted\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"document\",\"kind\":\"object\",\"type\":\"Document\",\"relationName\":\"CourtStaffToDocument\"},{\"name\":\"operatingArea\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":null},\"DocumentList\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sendByCourtId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sentByCourt\",\"kind\":\"object\",\"type\":\"Court\",\"relationName\":\"CourtToDocumentList\"},{\"name\":\"sentAt\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fileUrl\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":null},\"Document\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"receivedDate\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"documentCode\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"processProof\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"processAddress\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"processDeadline\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"processStatus\",\"kind\":\"enum\",\"type\":\"DocumentStatus\"},{\"name\":\"pricePerDocument\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"travelDistance\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"gasFee\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"innerTotalPrice\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"outerTotalPrice\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"courtStaffId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"courtStaff\",\"kind\":\"object\",\"type\":\"CourtStaff\",\"relationName\":\"CourtStaffToDocument\"},{\"name\":\"note\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"courtId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"court\",\"kind\":\"object\",\"type\":\"Court\",\"relationName\":\"CourtToDocument\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -185,6 +185,46 @@ export interface PrismaClient<
     * ```
     */
   get account(): Prisma.AccountDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.court`: Exposes CRUD operations for the **Court** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Courts
+    * const courts = await prisma.court.findMany()
+    * ```
+    */
+  get court(): Prisma.CourtDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.courtStaff`: Exposes CRUD operations for the **CourtStaff** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CourtStaffs
+    * const courtStaffs = await prisma.courtStaff.findMany()
+    * ```
+    */
+  get courtStaff(): Prisma.CourtStaffDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.documentList`: Exposes CRUD operations for the **DocumentList** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DocumentLists
+    * const documentLists = await prisma.documentList.findMany()
+    * ```
+    */
+  get documentList(): Prisma.DocumentListDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.document`: Exposes CRUD operations for the **Document** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Documents
+    * const documents = await prisma.document.findMany()
+    * ```
+    */
+  get document(): Prisma.DocumentDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {
