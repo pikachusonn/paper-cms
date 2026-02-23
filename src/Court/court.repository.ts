@@ -17,10 +17,10 @@ export class CourtRepository {
           where: {
             AND: [
               courtFilter.startDate && {
-                receivedDate: { gte: courtFilter.startDate },
+                processDeadline: { gte: courtFilter.startDate },
               },
               courtFilter.endDate && {
-                receivedDate: { lte: courtFilter.endDate },
+                processDeadline: { lte: courtFilter.endDate },
               },
               courtFilter.documentStatus && {
                 processStatus: courtFilter.documentStatus,

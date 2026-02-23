@@ -67,7 +67,7 @@ model Document {
     receivedDate String
     documentCode String
     content String
-    processProof String //file url
+    processProof String?
     processAddress String
     processDeadline String
     processStatus DocumentStatus @default(PENDING)

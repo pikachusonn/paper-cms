@@ -6,3 +6,8 @@ export enum ErrorKey {
   INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
 }
+
+export enum Sort {
+  ASC = 'ASCENDING',
+  DESC = 'DESCENDING',
+}

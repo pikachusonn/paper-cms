@@ -4,12 +4,17 @@ enum DocumentStatus {
   FINISHED
 }
 
+enum SortByDeadline {
+  desc
+  asc
+}
+
 type Document {
   id: ID!
   receivedDate: String!
   documentCode: String!
   content: String!
-  processProof: String!
+  processProof: String
   processAddress: String!
   processDeadline: String!
   processStatus: DocumentStatus!
@@ -32,10 +37,37 @@ type DocumentList {
   fileUrl: String!
 }
 
+input DocumentFilter {
+  courtId: ID!
+  deadlineStart: String
+  deadlineEnd: String
+  documentStatus: DocumentStatus
+  sort: SortByDeadline
+}
+
+input DocumentPayload {
+  receiveDate: String!
+  documentCode: String!
+  content: String!
+  processProof: String
+  processAddress: String!
+  processDeadline: String!
+  pricePerDocument: Int!
+  travelDistance: Int
+  courtStaff: String
+  note: String
+  court: String!
+}
+
+
 extend type Query {
   documents: [Document!]!
-  documentsByCourtId(courtId: ID!): [Document!]!
+  documentsByCourtId(documentFilter: DocumentFilter!): [Document!]!
   document(id: ID!): Document!
   documentLists: [DocumentList!]!
 }
 
+type Mutation {
+  createMutation(createMutationRequest: DocumentPayload!): Document!
+  createFromImport(createFromImportRequest: [DocumentPayload!]!): [Document!]!
+}

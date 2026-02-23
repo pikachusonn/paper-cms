@@ -1,4 +1,4 @@
-import { ErrorKey } from 'src/constant/common.js';
+import { ErrorKey, Sort } from '../constant/common.js';
 import { DocumentStatus } from '../generated/prisma/enums.js';
 
 export interface ApiErrorResponse {
@@ -18,4 +18,12 @@ export interface CourtFilter {
   startDate: string;
   endDate: string;
   documentStatus: DocumentStatus;
+}
+
+export interface DocumentFilter {
+  courtId: string;
+  deadlineStart: string;
+  deadlineEnd: string;
+  documentStatus: DocumentStatus;
+  sort: Sort;
 }

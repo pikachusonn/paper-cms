@@ -266,7 +266,7 @@ export type DocumentGroupByOutputType = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof: string | null
   processAddress: string
   processDeadline: string
   processStatus: $Enums.DocumentStatus
@@ -308,7 +308,7 @@ export type DocumentWhereInput = {
   receivedDate?: Prisma.StringFilter<"Document"> | string
   documentCode?: Prisma.StringFilter<"Document"> | string
   content?: Prisma.StringFilter<"Document"> | string
-  processProof?: Prisma.StringFilter<"Document"> | string
+  processProof?: Prisma.StringNullableFilter<"Document"> | string | null
   processAddress?: Prisma.StringFilter<"Document"> | string
   processDeadline?: Prisma.StringFilter<"Document"> | string
   processStatus?: Prisma.EnumDocumentStatusFilter<"Document"> | $Enums.DocumentStatus
@@ -329,7 +329,7 @@ export type DocumentOrderByWithRelationInput = {
   receivedDate?: Prisma.SortOrder
   documentCode?: Prisma.SortOrder
   content?: Prisma.SortOrder
-  processProof?: Prisma.SortOrder
+  processProof?: Prisma.SortOrderInput | Prisma.SortOrder
   processAddress?: Prisma.SortOrder
   processDeadline?: Prisma.SortOrder
   processStatus?: Prisma.SortOrder
@@ -354,7 +354,7 @@ export type DocumentWhereUniqueInput = Prisma.AtLeast<{
   receivedDate?: Prisma.StringFilter<"Document"> | string
   documentCode?: Prisma.StringFilter<"Document"> | string
   content?: Prisma.StringFilter<"Document"> | string
-  processProof?: Prisma.StringFilter<"Document"> | string
+  processProof?: Prisma.StringNullableFilter<"Document"> | string | null
   processAddress?: Prisma.StringFilter<"Document"> | string
   processDeadline?: Prisma.StringFilter<"Document"> | string
   processStatus?: Prisma.EnumDocumentStatusFilter<"Document"> | $Enums.DocumentStatus
@@ -375,7 +375,7 @@ export type DocumentOrderByWithAggregationInput = {
   receivedDate?: Prisma.SortOrder
   documentCode?: Prisma.SortOrder
   content?: Prisma.SortOrder
-  processProof?: Prisma.SortOrder
+  processProof?: Prisma.SortOrderInput | Prisma.SortOrder
   processAddress?: Prisma.SortOrder
   processDeadline?: Prisma.SortOrder
   processStatus?: Prisma.SortOrder
@@ -402,7 +402,7 @@ export type DocumentScalarWhereWithAggregatesInput = {
   receivedDate?: Prisma.StringWithAggregatesFilter<"Document"> | string
   documentCode?: Prisma.StringWithAggregatesFilter<"Document"> | string
   content?: Prisma.StringWithAggregatesFilter<"Document"> | string
-  processProof?: Prisma.StringWithAggregatesFilter<"Document"> | string
+  processProof?: Prisma.StringNullableWithAggregatesFilter<"Document"> | string | null
   processAddress?: Prisma.StringWithAggregatesFilter<"Document"> | string
   processDeadline?: Prisma.StringWithAggregatesFilter<"Document"> | string
   processStatus?: Prisma.EnumDocumentStatusWithAggregatesFilter<"Document"> | $Enums.DocumentStatus
@@ -421,7 +421,7 @@ export type DocumentCreateInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -440,7 +440,7 @@ export type DocumentUncheckedCreateInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -459,7 +459,7 @@ export type DocumentUpdateInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -478,7 +478,7 @@ export type DocumentUncheckedUpdateInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -497,7 +497,7 @@ export type DocumentCreateManyInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -516,7 +516,7 @@ export type DocumentUpdateManyMutationInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -533,7 +533,7 @@ export type DocumentUncheckedUpdateManyInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -737,7 +737,7 @@ export type DocumentCreateWithoutCourtInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -755,7 +755,7 @@ export type DocumentUncheckedCreateWithoutCourtInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -802,7 +802,7 @@ export type DocumentScalarWhereInput = {
   receivedDate?: Prisma.StringFilter<"Document"> | string
   documentCode?: Prisma.StringFilter<"Document"> | string
   content?: Prisma.StringFilter<"Document"> | string
-  processProof?: Prisma.StringFilter<"Document"> | string
+  processProof?: Prisma.StringNullableFilter<"Document"> | string | null
   processAddress?: Prisma.StringFilter<"Document"> | string
   processDeadline?: Prisma.StringFilter<"Document"> | string
   processStatus?: Prisma.EnumDocumentStatusFilter<"Document"> | $Enums.DocumentStatus
@@ -821,7 +821,7 @@ export type DocumentCreateWithoutCourtStaffInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -839,7 +839,7 @@ export type DocumentUncheckedCreateWithoutCourtStaffInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -883,7 +883,7 @@ export type DocumentCreateManyCourtInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -901,7 +901,7 @@ export type DocumentUpdateWithoutCourtInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -919,7 +919,7 @@ export type DocumentUncheckedUpdateWithoutCourtInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -937,7 +937,7 @@ export type DocumentUncheckedUpdateManyWithoutCourtInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -955,7 +955,7 @@ export type DocumentCreateManyCourtStaffInput = {
   receivedDate: string
   documentCode: string
   content: string
-  processProof: string
+  processProof?: string | null
   processAddress: string
   processDeadline: string
   processStatus?: $Enums.DocumentStatus
@@ -973,7 +973,7 @@ export type DocumentUpdateWithoutCourtStaffInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -991,7 +991,7 @@ export type DocumentUncheckedUpdateWithoutCourtStaffInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -1009,7 +1009,7 @@ export type DocumentUncheckedUpdateManyWithoutCourtStaffInput = {
   receivedDate?: Prisma.StringFieldUpdateOperationsInput | string
   documentCode?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
-  processProof?: Prisma.StringFieldUpdateOperationsInput | string
+  processProof?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   processAddress?: Prisma.StringFieldUpdateOperationsInput | string
   processDeadline?: Prisma.StringFieldUpdateOperationsInput | string
   processStatus?: Prisma.EnumDocumentStatusFieldUpdateOperationsInput | $Enums.DocumentStatus
@@ -1083,7 +1083,7 @@ export type $DocumentPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     receivedDate: string
     documentCode: string
     content: string
-    processProof: string
+    processProof: string | null
     processAddress: string
     processDeadline: string
     processStatus: $Enums.DocumentStatus
