@@ -1,43 +1,82 @@
 scalar DateTime
 
 enum Role {
-    ADMIN
-    STAFF
-}
-
-input LoginRequest {
-    email: String!
-    password: String!
+  ADMIN
+  STAFF
 }
 
 type Account {
-    id: ID!
-    email: String!
-    password: String!
-    createdAt: DateTime
-    avatar: String
-    role: Role!
+  id: ID!
+  email: String!
+  createdAt: DateTime
+  avatar: String
+  role: Role!
 }
 
 type LoginResponse {
-    accessToken: String!
-    refreshToken: String!
-    account: Account!
+  accessToken: String!
+  refreshToken: String!
+  account: Account!
 }
 
+# --- INPUTS ---
+
+input LoginRequest {
+  email: String!
+  password: String!
+}
+
+input CreateAccountInput {
+  email: String!
+  role: Role!
+  name: String!
+  phone: String
+  courtId: String!
+}
+
+input ChangePasswordInput {
+  userId: ID!
+  oldPassword: String!
+  newPassword: String!
+}
+
+input ResetPasswordInput {
+  email: String!
+  otp: String!
+  newPassword: String!
+}
+
+# --- QUERY ---
+# Giữ nguyên logic _empty nếu bạn dùng nó làm root,
+# nhưng thường ta gom các query vào extend type Query
 type Query {
   _empty: String
 }
 
 extend type Query {
-    accounts: [Account!]!
-    account(id: ID!): Account!
+  accounts: [Account!]!
+  account(id: ID!): Account!
 }
 
+# --- MUTATION (GỘP TẤT CẢ VÀO ĐÂY) ---
+# Sửa lỗi: Thay vì viết type rồi extend nhiều lần, hãy viết hết vào 1 chỗ
 
 type Mutation {
-    login(loginRequest: LoginRequest!): LoginResponse!
+  # 1. Login
+  login(loginRequest: LoginRequest!): LoginResponse!
+
+  # 2. Tạo tài khoản
+  createAccount(input: CreateAccountInput!): Account!
+
+  # 3. Đăng xuất
+  logout(userId: ID!): Boolean!
+
+  # 4. Đổi mật khẩu
+  changePassword(input: ChangePasswordInput!): Boolean!
+
+  # 5. Yêu cầu quên mật khẩu
+  forgotPassword(email: String!): Boolean!
+
+  # 6. Đặt lại mật khẩu
+  resetPassword(input: ResetPasswordInput!): Boolean!
 }
-
-
-

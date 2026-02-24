@@ -6,7 +6,7 @@ import { CourtFilter } from '../graphql.js';
 export class CourtService {
   constructor(private readonly courtRepository: CourtRepository) {}
 
-  async findAll(courtFilter: CourtFilter) {
-    return await this.courtRepository.findAll(courtFilter);
-  }
+  // async findAll(courtFilter: CourtFilter) {
+  //   return await this.courtRepository.findAll(courtFilter);
+  // }
 }

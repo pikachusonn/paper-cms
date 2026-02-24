@@ -29,6 +29,26 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface CreateAccountInput {
+    email: string;
+    role: Role;
+    name: string;
+    phone?: Nullable<string>;
+    courtId: string;
+}
+
+export interface ChangePasswordInput {
+    userId: string;
+    oldPassword: string;
+    newPassword: string;
+}
+
+export interface ResetPasswordInput {
+    email: string;
+    otp: string;
+    newPassword: string;
+}
+
 export interface CourtFilter {
     startDate?: Nullable<DateTime>;
     endDate?: Nullable<DateTime>;
@@ -60,7 +80,6 @@ export interface DocumentPayload {
 export interface Account {
     id: string;
     email: string;
-    password: string;
     createdAt?: Nullable<DateTime>;
     avatar?: Nullable<string>;
     role: Role;
@@ -89,6 +108,11 @@ export interface IQuery {
 
 export interface IMutation {
     login(loginRequest: LoginRequest): LoginResponse | Promise<LoginResponse>;
+    createAccount(input: CreateAccountInput): Account | Promise<Account>;
+    logout(userId: string): boolean | Promise<boolean>;
+    changePassword(input: ChangePasswordInput): boolean | Promise<boolean>;
+    forgotPassword(email: string): boolean | Promise<boolean>;
+    resetPassword(input: ResetPasswordInput): boolean | Promise<boolean>;
     createMutation(createMutationRequest: DocumentPayload): Document | Promise<Document>;
     createFromImport(createFromImportRequest: DocumentPayload[]): Document[] | Promise<Document[]>;
 }

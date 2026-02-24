@@ -7,7 +7,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { parseISO, isAfter } from 'date-fns';
-import { DocumentStatus } from '../generated/prisma/enums.js';
+import { DocumentStatus } from '@prisma/client';
 import { DocumentService } from './document.service.js';
 import * as graphql from '../graphql.js';
 

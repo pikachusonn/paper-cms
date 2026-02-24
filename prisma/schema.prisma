@@ -1,84 +1,154 @@
 generator client {
-    provider = "prisma-client"
-    output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "mysql"
+  provider = "mysql"
 }
 
 enum Role {
-    ADMIN
-    STAFF
+  ADMIN
+  STAFF
 }
 
 enum DocumentStatus {
-    PENDING
-    PROCESSED
-    FINISHED
+  PENDING   // Chờ tống đạt
+  PROCESSED // Đã thực hiện (Đang chờ duyệt)
+  FINISHED  // Hoàn thành
+  FAILED    // Thất bại
 }
 
+// --- ACCOUNT & AUTH ---
 model Account {
-    id String @id @default(uuid())
-    email String @unique
-    password String
-    createdAt DateTime @default(now())
-    avatar String?
-    role Role @default(STAFF)
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  avatar    String?
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  resetPasswordExpires DateTime?
+  resetPasswordToken   String?
+
+  // Relation 1-1: Account nắm giữ thông tin Staff
+  // Khi tạo Account có thể tạo luôn Staff đi kèm
+  courtStaffId String?     @unique
+  courtStaff   CourtStaff? @relation(fields: [courtStaffId], references: [id])
+
+  // Relation: Link sang thông báo
+  notifications Notification[]
 }
 
+// --- TÒA ÁN & NHÂN VIÊN ---
 model Court {
-    id String @id @default(uuid())
-    name String
-    address String
-    phone String?
-    email String?
-    staff CourtStaff[]
-    isDeleted Boolean @default(false)
-    courtNumber Int
-    documentList DocumentList[]
-    document Document[]
+  id          String   @id @default(uuid())
+  name        String
+  address     String
+  phone       String?
+  email       String?
+  courtNumber Int
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Relation 1-N: Một tòa án có NHIỀU nhân viên (thể hiện bằng dấu [])
+  staff        CourtStaff[]
+  
+  // Relation 1-N: Một tòa án có NHIỀU bảng kê
+  documentList DocumentList[]
+  
+  // Relation 1-N: Một tòa án có NHIỀU văn bản
+  documents    Document[]
 }
 
 model CourtStaff {
-    id String @id @default(uuid())
-    courtId String
-    court Court @relation(fields: [courtId], references: [id])
-    name String
-    phone String?
-    avatar String?
-    socialId String?
-    email String?
-    isDeleted Boolean @default(false)
-    document Document[]
-    operatingArea String
+  id            String   @id @default(uuid())
+  name          String
+  phone         String?
+  avatar        String?
+  socialId      String?
+  email         String?  // Email liên hệ công việc
+  operatingArea String?
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relation 1-1 ngược: Link về Account
+  account Account?
+
+  // Relation N-1: Nhân viên thuộc về 1 Tòa án
+  courtId String
+  court   Court  @relation(fields: [courtId], references: [id])
+
+  // Relation 1-N: Nhân viên đi làm nhiều văn bản
+  documents Document[]
 }
 
+// --- VĂN BẢN & BẢNG KÊ ---
 model DocumentList {
-    id String @id @default(uuid())
-    sendByCourtId String
-    sentByCourt Court @relation(fields: [sendByCourtId], references: [id])
-    sentAt String
-    fileUrl String
+  id            String   @id @default(uuid())
+  fileUrl       String
+  sentAt        DateTime @default(now()) // Đổi String -> DateTime để sort
+  
+  // Relation N-1: Bảng kê này của tòa nào gửi
+  sendByCourtId String
+  sentByCourt   Court    @relation(fields: [sendByCourtId], references: [id])
+
+  // Relation 1-N: Một bảng kê chứa NHIỀU văn bản (Thêm cái này logic mới chặt)
+  documents     Document[]
 }
 
 model Document {
-    id String @id @default(uuid())
-    receivedDate String
-    documentCode String
-    content String
-    processProof String?
-    processAddress String
-    processDeadline String
-    processStatus DocumentStatus @default(PENDING)
-    pricePerDocument Int
-    travelDistance Int?
-    gasFee Int?
-    innerTotalPrice Int?
-    outerTotalPrice Int?
-    courtStaffId String?
-    courtStaff CourtStaff? @relation(fields: [courtStaffId], references: [id])
-    note String?
-    courtId String
-    court Court @relation(fields: [courtId], references: [id])
+  id              String         @id @default(uuid())
+  documentCode    String         // Mã văn bản
+  content         String         @db.Text
+  
+  // -- Ngày tháng (Dùng DateTime để query Dashboard) --
+  receivedDate    DateTime       @default(now()) 
+  processDeadline DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // -- Xử lý --
+  processAddress  String?
+  processProof    String?        // Ảnh bằng chứng
+  processStatus   DocumentStatus @default(PENDING)
+  note            String?        @db.Text
+  
+  // -- Chi phí --
+  pricePerDocument Float @default(0)
+  travelDistance   Float @default(0)
+  gasFee           Float @default(0)
+  hazardousRoadFee Float @default(0)
+  otherFee         Float @default(0)
+  
+  innerTotalPrice  Float @default(0)
+  outerTotalPrice  Float @default(0)
+
+  // -- Relations --
+  
+  // 1. Thuộc bảng kê nào (Optional - vì có thể tạo lẻ không qua bảng kê)
+  documentListId  String?
+  documentList    DocumentList? @relation(fields: [documentListId], references: [id])
+
+  // 2. Ai đi làm (Optional - mới tạo chưa giao ai)
+  courtStaffId    String?
+  courtStaff      CourtStaff?   @relation(fields: [courtStaffId], references: [id])
+  
+  // 3. Của tòa nào
+  courtId         String
+  court           Court         @relation(fields: [courtId], references: [id])
+}
+
+// --- THÔNG BÁO ---
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  // Thông báo của account nào
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
 }

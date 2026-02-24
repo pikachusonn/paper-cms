@@ -6,31 +6,31 @@ import { CourtFilter } from '../graphql.js';
 export class CourtRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(courtFilter: CourtFilter) {
-    const courts = await this.prisma.court.findMany({
-      where: {
-        isDeleted: false,
-      },
-      include: {
-        staff: true,
-        document: {
-          where: {
-            AND: [
-              courtFilter.startDate && {
-                processDeadline: { gte: courtFilter.startDate },
-              },
-              courtFilter.endDate && {
-                processDeadline: { lte: courtFilter.endDate },
-              },
-              courtFilter.documentStatus && {
-                processStatus: courtFilter.documentStatus,
-              },
-            ].filter(Boolean),
-          },
-        },
-        documentList: true,
-      },
-    });
-    return courts;
-  }
+  // async findAll(courtFilter: CourtFilter) {
+  //   const courts = await this.prisma.court.findMany({
+  //     where: {
+  //       isDeleted: false,
+  //     },
+  //     include: {
+  //       staff: true,
+  //       document: {
+  //         where: {
+  //           AND: [
+  //             courtFilter.startDate && {
+  //               processDeadline: { gte: courtFilter.startDate },
+  //             },
+  //             courtFilter.endDate && {
+  //               processDeadline: { lte: courtFilter.endDate },
+  //             },
+  //             courtFilter.documentStatus && {
+  //               processStatus: courtFilter.documentStatus,
+  //             },
+  //           ].filter(Boolean),
+  //         },
+  //       },
+  //       documentList: true,
+  //     },
+  //   });
+  //   return courts;
+  // }
 }

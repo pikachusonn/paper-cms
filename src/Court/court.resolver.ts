@@ -8,9 +8,9 @@ import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
 export class CourtResolver {
   constructor(private readonly courtService: CourtService) {}
 
-  @Query('courts')
-  @UseGuards(JwtAuthGuard)
-  async courts(@Args('courtFilter') courtFilter: CourtFilter) {
-    return await this.courtService.findAll(courtFilter);
-  }
+  // @Query('courts')
+  // @UseGuards(JwtAuthGuard)
+  // async courts(@Args('courtFilter') courtFilter: CourtFilter) {
+  //   return await this.courtService.findAll(courtFilter);
+  // }
 }
