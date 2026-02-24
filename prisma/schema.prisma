@@ -12,143 +12,154 @@ enum Role {
 }
 
 enum DocumentStatus {
-  PENDING   // Chờ tống đạt
-  PROCESSED // Đã thực hiện (Đang chờ duyệt)
-  FINISHED  // Hoàn thành
-  FAILED    // Thất bại
+  WAITING   // Đợi tống đạt (Mặc định khi mới tạo)
+  COMPLETED // Đã tống đạt (Nhân viên đã up bằng chứng)
+  CONFIRMED // Đã xác nhận (Admin đã duyệt)
 }
 
-// --- ACCOUNT & AUTH ---
+// --- 2. ACCOUNT & AUTH ---
 model Account {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  avatar    String?
-  role      Role     @default(STAFF)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  password             String
+  avatar               String?
+  role                 Role      @default(STAFF)
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  // Quên mật khẩu
   resetPasswordExpires DateTime?
   resetPasswordToken   String?
 
-  // Relation 1-1: Account nắm giữ thông tin Staff
-  // Khi tạo Account có thể tạo luôn Staff đi kèm
-  courtStaffId String?     @unique
-  courtStaff   CourtStaff? @relation(fields: [courtStaffId], references: [id])
+  // Relation 1-1: Account liên kết với thông tin nhân viên (CourtStaff)
+  // Logic: Tạo Account xong sẽ tạo CourtStaff đi kèm
+  courtStaffId         String?     @unique
+  courtStaff           CourtStaff? @relation(fields: [courtStaffId], references: [id])
 
-  // Relation: Link sang thông báo
-  notifications Notification[]
+  // Relation: Thông báo của tài khoản này
+  notifications        Notification[]
 }
 
-// --- TÒA ÁN & NHÂN VIÊN ---
+// --- 3. TÒA ÁN ---
 model Court {
   id          String   @id @default(uuid())
-  name        String
+  name        String   // Tòa án nhân dân huyện ABC...
   address     String
   phone       String?
   email       String?
-  courtNumber Int
+  courtNumber Int      // Mã số định danh tòa (nếu cần sort)
+  
   isDeleted   Boolean  @default(false)
   createdAt   DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  updatedAt   DateTime @updatedAt
 
-  // Relation 1-N: Một tòa án có NHIỀU nhân viên (thể hiện bằng dấu [])
-  staff        CourtStaff[]
-  
-  // Relation 1-N: Một tòa án có NHIỀU bảng kê
-  documentList DocumentList[]
-  
-  // Relation 1-N: Một tòa án có NHIỀU văn bản
-  documents    Document[]
+  // Relation 1-N
+  staff        CourtStaff[]   // Danh sách nhân viên thuộc tòa
+  documentList DocumentList[] // Các bảng kê của tòa này
+  documents    Document[]     // Các văn bản của tòa này
 }
 
+// --- 4. NHÂN VIÊN (Profile) ---
 model CourtStaff {
   id            String   @id @default(uuid())
-  name          String
+  name          String   // Tên hiển thị (Nguyễn Văn A)
   phone         String?
   avatar        String?
-  socialId      String?
-  email         String?  // Email liên hệ công việc
-  operatingArea String?
+  socialId      String?  // Zalo/FB ID (nếu cần)
+  email         String?  // Email liên hệ công việc (có thể khác email login)
+  operatingArea String?  // Khu vực hoạt động
+  
   isDeleted     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Relation 1-1 ngược: Link về Account
-  account Account?
+  // Relation 1-1 ngược: Link về Account login
+  account       Account?
 
   // Relation N-1: Nhân viên thuộc về 1 Tòa án
-  courtId String
-  court   Court  @relation(fields: [courtId], references: [id])
+  courtId       String
+  court         Court    @relation(fields: [courtId], references: [id])
 
-  // Relation 1-N: Nhân viên đi làm nhiều văn bản
-  documents Document[]
+  // Relation 1-N: Nhân viên đi tống đạt nhiều văn bản
+  documents     Document[]
 }
 
-// --- VĂN BẢN & BẢNG KÊ ---
+// --- 5. BẢNG KÊ (DOCUMENT LIST) ---
 model DocumentList {
   id            String   @id @default(uuid())
-  fileUrl       String
-  sentAt        DateTime @default(now()) // Đổi String -> DateTime để sort
+  code          String?  // Mã bảng kê (nếu có)
+  fileUrl       String   // Link file bảng kê gốc (PDF/Excel)
+  sentAt        DateTime @default(now()) 
   
   // Relation N-1: Bảng kê này của tòa nào gửi
   sendByCourtId String
   sentByCourt   Court    @relation(fields: [sendByCourtId], references: [id])
 
-  // Relation 1-N: Một bảng kê chứa NHIỀU văn bản (Thêm cái này logic mới chặt)
+  // Relation 1-N: Một bảng kê chứa NHIỀU văn bản
   documents     Document[]
 }
 
+// --- 6. VĂN BẢN TỐNG ĐẠT (QUAN TRỌNG NHẤT) ---
 model Document {
-  id              String         @id @default(uuid())
-  documentCode    String         // Mã văn bản
-  content         String         @db.Text
+  id                String         @id @default(uuid())
   
-  // -- Ngày tháng (Dùng DateTime để query Dashboard) --
-  receivedDate    DateTime       @default(now()) 
-  processDeadline DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  // -- Thông tin chung (Màn hình tạo mới) --
+  docCode           String         // Mã văn bản (Số 164/TB-TA...)
+  docType           String         // Trích yếu (Thông báo sửa chữa, bổ sung...)
+  receivedDate      DateTime       @default(now()) // Ngày nhận văn bản
   
-  // -- Xử lý --
-  processAddress  String?
-  processProof    String?        // Ảnh bằng chứng
-  processStatus   DocumentStatus @default(PENDING)
-  note            String?        @db.Text
+  // -- Thông tin người nhận & Hạn --
+  recipient         String         // Người được tống đạt (Ông Nguyễn Văn A)
+  address           String?        // Địa chỉ tống đạt
+  dueDate           DateTime       // Hạn tống đạt (Dùng để tính deadline, bôi đỏ, gửi mail)
   
-  // -- Chi phí --
-  pricePerDocument Float @default(0)
-  travelDistance   Float @default(0)
-  gasFee           Float @default(0)
-  hazardousRoadFee Float @default(0)
-  otherFee         Float @default(0)
+  // -- Chi tiết thực hiện (Popup edit) --
+  deliveryMethod    String?        // Hình thức tống đạt (Trực tiếp, Bưu điện...)
+  responsiblePerson String?        // Thư ký chịu trách nhiệm (Text: "Hồng Vân")
+  content           String?        @db.Text // Nội dung chi tiết / Ghi chú
   
-  innerTotalPrice  Float @default(0)
-  outerTotalPrice  Float @default(0)
+  // -- Kết quả xử lý --
+  evidenceUrl       String?        // Ảnh bằng chứng (Khi upload lên sẽ chuyển status -> COMPLETED)
+  status            DocumentStatus @default(WAITING) // WAITING -> COMPLETED -> CONFIRMED
+  
+  // -- Chi phí (Khớp với giao diện Popup) --
+  distance          Float          @default(0) // Số km đã đi
+  cost              Float          @default(0) // Chi phí tống đạt (130.000)
+  fuelCost          Float          @default(0) // Hỗ trợ xăng xe
+  otherCost         Float          @default(0) // Chi phí khác
+  totalCost         Float          @default(0) // Tổng chi phí (Nội tỉnh/Ngoại tỉnh)
 
-  // -- Relations --
-  
-  // 1. Thuộc bảng kê nào (Optional - vì có thể tạo lẻ không qua bảng kê)
-  documentListId  String?
-  documentList    DocumentList? @relation(fields: [documentListId], references: [id])
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  // 2. Ai đi làm (Optional - mới tạo chưa giao ai)
-  courtStaffId    String?
-  courtStaff      CourtStaff?   @relation(fields: [courtStaffId], references: [id])
-  
-  // 3. Của tòa nào
-  courtId         String
-  court           Court         @relation(fields: [courtId], references: [id])
+  // -- RELATIONS --
+
+  // 1. Của tòa nào (Bắt buộc)
+  courtId           String
+  court             Court          @relation(fields: [courtId], references: [id])
+
+  // 2. Thuộc bảng kê nào (Optional - vì có thể tạo lẻ)
+  documentListId    String?
+  documentList      DocumentList?  @relation(fields: [documentListId], references: [id])
+
+  // 3. Nhân viên đi làm (Optional - dùng để tracking ai đã đi làm thực tế trong hệ thống)
+  // Lưu ý: Trường 'responsiblePerson' ở trên chỉ là text hiển thị, còn trường này link với user thật.
+  courtStaffId      String?
+  courtStaff        CourtStaff?    @relation(fields: [courtStaffId], references: [id])
 }
 
-// --- THÔNG BÁO ---
+// --- 7. THÔNG BÁO ---
 model Notification {
   id        String   @id @default(uuid())
   title     String
-  content   String   @db.Text
+  content   String   @db.Text // "Văn bản số ... còn 1 ngày nữa đến hạn"
   isRead    Boolean  @default(false)
+  type      String   // "REMINDER", "SYSTEM"
+  
   createdAt DateTime @default(now())
   
-  // Thông báo của account nào
+  // Thông báo này gửi cho account nào
   accountId String
   account   Account  @relation(fields: [accountId], references: [id])
 }

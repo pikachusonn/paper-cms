@@ -11,9 +11,11 @@ import { AccountRepository } from './account.repository.js';
 import * as bcrypt from 'bcrypt';
 import { ACCESS_JWT, REFRESH_JWT } from '../utils/jwt.providers.js';
 import {
+  IAccountFilterInput,
   IChangePasswordInput,
   ICreateAccountServiceInput,
   IResetPasswordInput,
+  IUpdateAccountInput,
   LoginRequest,
 } from '../interface/account.js';
 import { JwtService } from '@nestjs/jwt';
@@ -115,49 +117,35 @@ export class AccountService {
 
   // --- 2. CHANGE PASSWORD (Đổi mật khẩu chủ động) ---
   async changePassword(input: IChangePasswordInput) {
-    // a. Lấy user từ DB
     const user = await this.accountRepository.findAccountById(input.userId);
     if (!user) throw new NotFoundException('Tài khoản không tồn tại');
-
-    // b. Check mật khẩu cũ
     const isMatch = await bcrypt.compare(input.oldPassword, user.password);
     if (!isMatch)
       throw new UnauthorizedException('Mật khẩu cũ không chính xác');
-
-    // c. Hash mật khẩu mới và lưu
     const newHash = await bcrypt.hash(input.newPassword, 10);
     await this.accountRepository.updatePassword(user.id, newHash);
 
     return true;
   }
 
-  // --- 3. FORGOT PASSWORD (Gửi OTP) ---
+  // FORGOT PASSWORD (Gửi OTP) ---
   async forgotPassword(email: string) {
-    // a. Check user tồn tại
     const user = await this.accountRepository.findAccountByEmail(email);
     if (!user)
       throw new NotFoundException('Email không tồn tại trong hệ thống');
-
-    // b. Tạo OTP 6 số ngẫu nhiên
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // c. Set hạn 15 phút (Tính bằng mili giây)
     const expires = new Date(Date.now() + 15 * 60 * 1000);
-
-    // d. Lưu vào DB
     await this.accountRepository.saveResetToken(email, otp, expires);
-
-    // e. Gửi mail (Bọc try catch để không crash)
     try {
       await this.mailService.sendResetPassword(email, otp);
       return true;
     } catch (error) {
       console.error(error);
-      return false; // Báo lỗi gửi mail
+      return false;
     }
   }
 
-  // --- 4. RESET PASSWORD (Xác nhận OTP và đổi pass) ---
+  // RESET PASSWORD (Xác nhận OTP và đổi pass) ---
   async resetPassword(input: IResetPasswordInput) {
     // a. Tìm user có email và OTP khớp, và còn hạn
     const user = await this.accountRepository.findByResetToken(
@@ -174,5 +162,17 @@ export class AccountService {
     await this.accountRepository.updatePassword(user.id, newHash);
 
     return true;
+  }
+  async getAllAccounts(filter: IAccountFilterInput) {
+    return await this.accountRepository.findAll(filter);
+  }
+
+  async updateAccount(input: IUpdateAccountInput) {
+    // Có thể check xem user tồn tại không trước khi update nếu kỹ
+    return await this.accountRepository.updateAccount(input);
+  }
+
+  async deleteAccount(id: string) {
+    return await this.accountRepository.softDelete(id);
   }
 }

@@ -1,43 +1,29 @@
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Role } from '@prisma/client'; // Import Enum Role từ Prisma
 import { AccountService } from './account.service.js';
 import {
+  IAccountFilterInput,
   IChangePasswordInput,
   IResetPasswordInput,
+  IUpdateAccountInput,
 } from '../interface/account.js';
+
+// Import các "vệ sĩ" (Guards) và Decorator
+import { RolesGuard } from '../guard/roles.guard.js';
+import { Roles } from '../decorator/roles.decorator.js';
+import { CurrentUser } from '../decorator/current-user.decorator.js';
+import { JwtAuthGuard } from 'src/guard/jwtAuth.guard.js';
 
 @Resolver()
 export class AccountResolver {
   constructor(private readonly accountService: AccountService) {}
 
-  @Query()
-  accounts() {
-    return this.accountService.findAllAccounts();
-  }
-
-  @Query()
-  account(@Args('id') id: string) {
-    return this.accountService.findAccountById(id);
-  }
+  // --- CÁC API CÔNG KHAI (KHÔNG CẦN GUARD) ---
 
   @Mutation('login')
   login(@Args('loginRequest') loginRequest: any) {
     return this.accountService.login(loginRequest);
-  }
-
-  @Mutation('createAccount')
-  async createAccount(@Args('input') input: any) {
-    return await this.accountService.createAccount(input);
-  }
-
-  @Mutation('logout')
-  async logout(@Args('userId') userId: string) {
-    return await this.accountService.logout(userId);
-  }
-
-  @Mutation('changePassword')
-  // 👇 Đã thay 'any' bằng 'IChangePasswordInput' -> Gõ input. sẽ có gợi ý
-  async changePassword(@Args('input') input: IChangePasswordInput) {
-    return await this.accountService.changePassword(input);
   }
 
   @Mutation('forgotPassword')
@@ -46,8 +32,67 @@ export class AccountResolver {
   }
 
   @Mutation('resetPassword')
-  // 👇 Đã thay 'any' bằng 'IResetPasswordInput'
   async resetPassword(@Args('input') input: IResetPasswordInput) {
     return await this.accountService.resetPassword(input);
+  }
+
+  // --- CÁC API CẦN ĐĂNG NHẬP (GqlAuthGuard) ---
+
+  @Query()
+  @UseGuards(JwtAuthGuard) // 🔒 Phải đăng nhập mới xem được ds
+  accounts() {
+    return this.accountService.findAllAccounts();
+  }
+
+  @Query()
+  @UseGuards(JwtAuthGuard)
+  account(@Args('id') id: string) {
+    return this.accountService.findAccountById(id);
+  }
+
+  @Mutation('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@CurrentUser() user: any) {
+    return await this.accountService.logout(user.id);
+  }
+
+  @Mutation('changePassword')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Args('input') input: IChangePasswordInput,
+    @CurrentUser() user: any,
+  ) {
+    input.userId = user.id;
+    return await this.accountService.changePassword(input);
+  }
+
+  // --- CÁC API CHỈ ADMIN MỚI ĐƯỢC DÙNG (GqlAuthGuard + RolesGuard) ---
+
+  @Mutation('createAccount')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN) // 👮 Chỉ ADMIN
+  async createAccount(@Args('input') input: any) {
+    return await this.accountService.createAccount(input);
+  }
+
+  @Query('getAllAccounts')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async getAllAccounts(@Args('filter') filter: IAccountFilterInput) {
+    return await this.accountService.getAllAccounts(filter || {});
+  }
+
+  @Mutation('updateAccount')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async updateAccount(@Args('input') input: IUpdateAccountInput) {
+    return await this.accountService.updateAccount(input);
+  }
+
+  @Mutation('deleteAccount')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async deleteAccount(@Args('id') id: string) {
+    return await this.accountService.deleteAccount(id);
   }
 }

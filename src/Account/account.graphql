@@ -46,6 +46,31 @@ input ResetPasswordInput {
   newPassword: String!
 }
 
+type AccountPagination {
+  data: [Account!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+input AccountFilterInput {
+  page: Int
+  limit: Int
+  search: String   # Tìm theo Tên hoặc Email
+  role: Role
+  courtId: String  # Lọc nhân viên của tòa nào
+}
+
+input UpdateAccountInput {
+  id: ID!          # ID tài khoản cần sửa
+  name: String
+  phone: String
+  role: Role
+  courtId: String  # Chuyển công tác sang tòa khác (nếu cần)
+  avatar: String
+}
+
 # --- QUERY ---
 # Giữ nguyên logic _empty nếu bạn dùng nó làm root,
 # nhưng thường ta gom các query vào extend type Query
@@ -56,6 +81,7 @@ type Query {
 extend type Query {
   accounts: [Account!]!
   account(id: ID!): Account!
+  getAllAccounts(filter: AccountFilterInput): AccountPagination!
 }
 
 # --- MUTATION (GỘP TẤT CẢ VÀO ĐÂY) ---
@@ -79,4 +105,10 @@ type Mutation {
 
   # 6. Đặt lại mật khẩu
   resetPassword(input: ResetPasswordInput!): Boolean!
+
+  # 7. Cập nhật thông tin
+  updateAccount(input: UpdateAccountInput!): Account!
+  
+  # 8. Xóa mềm user (Soft Delete)
+  deleteAccount(id: ID!): Boolean!
 }

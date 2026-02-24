@@ -1,28 +1,32 @@
-
-
 scalar DateTime
 
-type Court {
+enum DocumentStatus {
+  WAITING
+  COMPLETED
+  CONFIRMED
+}
+
+# 1. Object cho từng dòng trong bảng danh sách Tòa án
+type CourtStats {
   id: ID!
   name: String!
-  address: String!
-  phone: String
-  email: String
-  courtNumber: Int!
-  isDeleted: Boolean!
-  staff: [CourtStaff!]!
-  documentList: [DocumentList!]!
-  document: [Document!]!
+  address: String
+  # Số liệu tính toán
+  waitingCount: Int!    # Cột "Số giấy tờ chưa tống đạt"
+  overdueCount: Int!    # Cột "Số giấy tờ đến hạn/quá hạn"
 }
 
-extend type Query {
-  courts(courtFilter: CourtFilter): [Court!]!
-  court(id: ID!): Court!
+# 2. Object cho thanh thống kê tổng quan (Dashboard Header)
+type DashboardSummary {
+  totalWaiting: Int!    # Tổng chưa tống đạt
+  totalOverdue: Int!    # Tổng quá hạn
+  totalStaff: Int!      # Nhân viên nhập liệu (Role STAFF)
+  totalSecretary: Int!  # Thư ký (Có thể đếm số user hoặc số thư ký unique trong văn bản)
+  courts: [CourtStats!]! # Danh sách tòa án ở dưới
 }
 
-input CourtFilter {
-  startDate: DateTime
-  endDate: DateTime
-  documentStatus: DocumentStatus
+# 3. Query
+type Query {
+  # API lấy tất cả số liệu cho màn hình 1, lọc theo năm
+  dashboardStats(year: Int!): DashboardSummary!
 }
-
