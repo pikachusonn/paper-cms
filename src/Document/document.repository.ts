@@ -1,66 +1,94 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../service/prisma.service.js';
 import * as graphql from '../graphql.js';
-import { Prisma } from '@prisma/client'; // Import thêm để ép kiểu chính xác cho Prisma
-import {
-  DocumentCreateInput,
-  DocumentCreateManyInput,
-} from '../generated/prisma/models.js';
-
+import { Prisma, DocumentStatus } from '@prisma/client';
 @Injectable()
 export class DocumentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findDocumentByCourtId(documentFilter: graphql.DocumentFilter) {
-    return await this.prisma.document.findMany({
-      where: {
-        AND: [
-          { courtId: documentFilter.courtId },
-          // Convert String -> Date cho bộ lọc
-          ...(documentFilter.deadlineStart
-            ? [
-                {
-                  processDeadline: {
-                    gte: new Date(documentFilter.deadlineStart),
-                  },
-                },
-              ]
-            : []),
+  async findDocumentByCourtId(filter: graphql.GetDocsFilterInput) {
+    const page = filter.page ?? 1;
+    const limit = filter.limit ?? 10;
+    const { courtId, year, status, search } = filter;
+    const skip = (page - 1) * limit;
+    // 1. Tính toán ngày đầu năm - cuối năm
+    const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+    const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+    const now = new Date();
+    // 2. Xây dựng điều kiện lọc
+    const where: Prisma.DocumentWhereInput = {
+      courtId: courtId,
+      receivedDate: {
+        gte: startDate,
+        lte: endDate,
+      },
+    };
 
-          ...(documentFilter.deadlineEnd
-            ? [
-                {
-                  processDeadline: {
-                    lte: new Date(documentFilter.deadlineEnd),
-                  },
-                },
-              ]
-            : []),
+    if (status) {
+      where.status = status as DocumentStatus;
+    }
 
-          ...(documentFilter.documentStatus
-            ? [
-                {
-                  processStatus: documentFilter.documentStatus,
-                },
-              ]
-            : []),
-        ].filter(Boolean) as Prisma.DocumentWhereInput[], // Ép kiểu để tránh lỗi mảng rỗng
+    if (search) {
+      where.OR = [
+        { docCode: { contains: search } },
+        { recipient: { contains: search } },
+      ];
+    }
+
+    // 3. Thực hiện Query
+    const [total, documents, statsWaiting, statsOverdue] = await Promise.all([
+      this.prisma.document.count({ where }),
+
+      this.prisma.document.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { receivedDate: 'desc' },
+        include: {
+          court: true,
+          courtStaff: true,
+        },
+      }),
+
+      // Đếm Waiting
+      this.prisma.document.count({
+        where: {
+          courtId,
+          receivedDate: { gte: startDate, lte: endDate },
+          status: DocumentStatus.WAITING,
+        },
+      }),
+
+      // Đếm Overdue
+      this.prisma.document.count({
+        where: {
+          courtId,
+          receivedDate: { gte: startDate, lte: endDate },
+          status: {
+            notIn: [DocumentStatus.COMPLETED, DocumentStatus.CONFIRMED],
+          },
+          dueDate: { lt: now },
+        },
+      }),
+    ]);
+
+    // 4. Trả về
+    return {
+      data: documents,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      statHeader: {
+        waiting: statsWaiting,
+        overdue: statsOverdue,
       },
-      orderBy: {
-        processDeadline: documentFilter?.sort || 'desc',
-      },
-      include: {
-        court: true,
-        // courtStaff: true, // Bỏ comment nếu cần lấy thông tin nhân viên
-      },
-    });
+    };
   }
 
   async findDocumentById(id: string) {
     return await this.prisma.document.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
       include: {
         court: true,
         courtStaff: true,
@@ -68,8 +96,8 @@ export class DocumentRepository {
     });
   }
 
-  async createSingleDocument(documentPayload: DocumentCreateInput) {
-    // Làm sạch dữ liệu trước khi gọi Prisma
+  async createSingleDocument(documentPayload: any) {
+    // Làm sạch dữ liệu
     const cleanData = this.sanitizePayload(documentPayload);
 
     return await this.prisma.document.create({
@@ -77,8 +105,7 @@ export class DocumentRepository {
     });
   }
 
-  async createMultiDocument(documentPayload: DocumentCreateManyInput[]) {
-    // Làm sạch từng phần tử trong mảng
+  async createMultiDocument(documentPayload: any[]) {
     const cleanDataList = documentPayload.map((item) =>
       this.sanitizePayload(item),
     );
@@ -89,31 +116,41 @@ export class DocumentRepository {
   }
 
   /**
-   * Hàm helper: Chuyển đổi dữ liệu từ GraphQL Input (có thể null)
-   * sang Prisma Input (cần undefined hoặc giá trị cụ thể)
+   * Hàm helper: Map dữ liệu từ Input cũ sang Schema Mới
    */
   private sanitizePayload(input: any): Prisma.DocumentUncheckedCreateInput {
     return {
-      ...input,
-      // Xử lý các trường số: Nếu null hoặc undefined -> gán bằng 0
-      travelDistance: input.travelDistance ?? 0,
-      gasFee: input.gasFee ?? 0,
-      hazardousRoadFee: input.hazardousRoadFee ?? 0,
-      otherFee: input.otherFee ?? 0,
-      pricePerDocument: input.pricePerDocument ?? 0,
-      innerTotalPrice: input.innerTotalPrice ?? 0,
-      outerTotalPrice: input.outerTotalPrice ?? 0,
+      // --- Map các trường cơ bản ---
+      docCode: input.docCode, // Mã văn bản
+      docType: input.docType, // Trích yếu
+      recipient: input.recipient,
+      address: input.address,
+      content: input.content || input.note, // Map note cũ sang content mới
 
-      // Xử lý ngày tháng: Convert String -> Date Object
+      // --- Map Ngày tháng ---
       receivedDate: input.receivedDate
         ? new Date(input.receivedDate)
-        : undefined, // Prisma sẽ tự lấy @default(now()) nếu undefined
-      processDeadline: input.processDeadline
-        ? new Date(input.processDeadline)
-        : null,
-      // Đảm bảo các trường quan hệ (nếu dùng UncheckedInput thì giữ nguyên ID string)
+        : new Date(),
+
+      dueDate: input.processDeadline
+        ? new Date(input.processDeadline) // Map input cũ -> field mới
+        : new Date(input.dueDate), // Hoặc lấy trực tiếp nếu input đã sửa
+
+      // --- Map Chi phí (Đổi tên field cho khớp Schema mới) ---
+      distance: input.travelDistance ?? 0, // travelDistance -> distance
+      fuelCost: input.gasFee ?? 0, // gasFee -> fuelCost
+      cost: input.pricePerDocument ?? 0, // pricePerDocument -> cost
+      otherCost: input.otherFee ?? 0, // otherFee -> otherCost
+      totalCost: input.outerTotalPrice ?? 0, // outerTotalPrice -> totalCost (Tạm tính)
+
+      // --- Map Relations ---
       courtId: input.courtId,
       courtStaffId: input.courtStaffId ?? null,
+
+      // --- Các trường khác ---
+      responsiblePerson: input.responsiblePerson,
+      deliveryMethod: input.deliveryMethod,
+      evidenceUrl: input.processProof, // processProof -> evidenceUrl
     };
   }
 }

@@ -6,48 +6,74 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { parseISO, isAfter } from 'date-fns';
+import { UseGuards } from '@nestjs/common';
 import { DocumentStatus } from '@prisma/client';
 import { DocumentService } from './document.service.js';
-import * as graphql from '../graphql.js';
+import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
 
 @Resolver('Document')
 export class DocumentResolver {
   constructor(private readonly documentService: DocumentService) {}
 
-  @Query('documentsByCourtId')
-  async documentsByCourtId(
-    @Args('documentFilter') documentFilter: graphql.DocumentFilter,
-  ) {
-    return await this.documentService.getDocumentsByCourtId(documentFilter);
+  // --- 1. QUERY ---
+
+  @Query('getDocumentsByCourt')
+  @UseGuards(JwtAuthGuard)
+  async getDocumentsByCourt(@Args('filter') filter: any) {
+    // Tên tham số trong Schema là 'filter', nên ở đây @Args('filter')
+    return await this.documentService.getDocumentsByCourt(filter);
   }
 
   @Query('document')
-  async document(@Args('id') documentId: string) {
-    return await this.documentService.getDetailedDocument(documentId);
+  @UseGuards(JwtAuthGuard)
+  async document(@Args('id') id: string) {
+    return await this.documentService.getDocumentById(id);
   }
 
-  @Mutation('createMutation')
-  async createMutation(
-    @Args('createMutationRequest') documentPayload: graphql.DocumentPayload,
-  ) {
-    return await this.documentService.createSingleDocument(documentPayload);
+  // --- 2. MUTATION ---
+
+  @Mutation('createDocument')
+  @UseGuards(JwtAuthGuard)
+  async createDocument(@Args('input') input: any) {
+    // Tên tham số trong Schema là 'input', nên ở đây @Args('input')
+    return await this.documentService.createDocument(input);
   }
 
-  @Mutation('createFromImport')
-  async createFromImport(
-    @Args('createFromImportRequest') documentPayload: graphql.DocumentPayload[],
-  ) {
-    return await this.documentService.createMultiDocument(documentPayload);
+  // Lưu ý: Mutation 'createFromImport' đã bị bỏ trong Schema mới
+  // Nên tôi xóa đi để tránh lỗi "defined in resolver but not in schema"
+
+  // --- 3. FIELD TÍNH TOÁN (ResolveField) ---
+
+  // Tính toán trường 'isOverdue' (Thay cho isLate cũ)
+  @ResolveField('isOverdue')
+  isOverdue(@Parent() doc: any): boolean {
+    // Logic: Nếu đã xong (COMPLETED/CONFIRMED) thì ko bao giờ quá hạn
+    if (
+      doc.status === DocumentStatus.COMPLETED ||
+      doc.status === DocumentStatus.CONFIRMED
+    ) {
+      return false;
+    }
+    // Logic: Nếu chưa xong mà Hạn < Hiện tại -> Quá hạn
+    // Lưu ý: DB mới dùng field 'dueDate', ko phải 'processDeadline'
+    return new Date(doc.dueDate) < new Date();
   }
 
-  @ResolveField('isLate')
-  isLate(@Parent() document: any): boolean {
-    const now = new Date();
-    const deadline = parseISO(document.processDeadline);
-    return (
-      document.processStatus === DocumentStatus.PENDING &&
-      isAfter(now, deadline)
-    );
+  // Tính toán trường 'isUrgent' (Sắp đến hạn trong 24h)
+  @ResolveField('isUrgent')
+  isUrgent(@Parent() doc: any): boolean {
+    if (
+      doc.status === DocumentStatus.COMPLETED ||
+      doc.status === DocumentStatus.CONFIRMED
+    ) {
+      return false;
+    }
+
+    const now = new Date().getTime();
+    const due = new Date(doc.dueDate).getTime();
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    // Logic: Chưa quá hạn VÀ còn dưới 1 ngày là đến hạn
+    return due > now && due - now <= oneDay;
   }
 }

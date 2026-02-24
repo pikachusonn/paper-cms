@@ -13,7 +13,7 @@ import {
 import { RolesGuard } from '../guard/roles.guard.js';
 import { Roles } from '../decorator/roles.decorator.js';
 import { CurrentUser } from '../decorator/current-user.decorator.js';
-import { JwtAuthGuard } from 'src/guard/jwtAuth.guard.js';
+import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
 
 @Resolver()
 export class AccountResolver {

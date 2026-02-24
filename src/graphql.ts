@@ -14,14 +14,9 @@ export enum Role {
 }
 
 export enum DocumentStatus {
-    PENDING = "PENDING",
-    PROCESSED = "PROCESSED",
-    FINISHED = "FINISHED"
-}
-
-export enum SortByDeadline {
-    desc = "desc",
-    asc = "asc"
+    WAITING = "WAITING",
+    COMPLETED = "COMPLETED",
+    CONFIRMED = "CONFIRMED"
 }
 
 export interface LoginRequest {
@@ -49,32 +44,54 @@ export interface ResetPasswordInput {
     newPassword: string;
 }
 
-export interface CourtFilter {
-    startDate?: Nullable<DateTime>;
-    endDate?: Nullable<DateTime>;
-    documentStatus?: Nullable<DocumentStatus>;
+export interface AccountFilterInput {
+    page?: Nullable<number>;
+    limit?: Nullable<number>;
+    search?: Nullable<string>;
+    role?: Nullable<Role>;
+    courtId?: Nullable<string>;
 }
 
-export interface DocumentFilter {
+export interface UpdateAccountInput {
+    id: string;
+    name?: Nullable<string>;
+    phone?: Nullable<string>;
+    role?: Nullable<Role>;
+    courtId?: Nullable<string>;
+    avatar?: Nullable<string>;
+}
+
+export interface GetDocsFilterInput {
     courtId: string;
-    deadlineStart?: Nullable<string>;
-    deadlineEnd?: Nullable<string>;
-    documentStatus?: Nullable<DocumentStatus>;
-    sort?: Nullable<SortByDeadline>;
+    year: number;
+    status?: Nullable<DocumentStatus>;
+    page?: Nullable<number>;
+    limit?: Nullable<number>;
+    search?: Nullable<string>;
 }
 
-export interface DocumentPayload {
-    receiveDate: string;
-    documentCode: string;
-    content: string;
-    processProof?: Nullable<string>;
-    processAddress: string;
-    processDeadline: string;
-    pricePerDocument: number;
-    travelDistance?: Nullable<number>;
-    courtStaff?: Nullable<string>;
-    note?: Nullable<string>;
-    court: string;
+export interface CreateDocumentInput {
+    courtId: string;
+    docCode: string;
+    docType: string;
+    recipient: string;
+    address?: Nullable<string>;
+    receivedDate?: Nullable<DateTime>;
+    dueDate: DateTime;
+    deliveryMethod?: Nullable<string>;
+    responsiblePerson?: Nullable<string>;
+    content?: Nullable<string>;
+}
+
+export interface UpdateDocumentInput {
+    id: string;
+    evidenceUrl?: Nullable<string>;
+    distance?: Nullable<number>;
+    cost?: Nullable<number>;
+    fuelCost?: Nullable<number>;
+    otherCost?: Nullable<number>;
+    totalCost?: Nullable<number>;
+    status?: Nullable<DocumentStatus>;
 }
 
 export interface Account {
@@ -91,19 +108,25 @@ export interface LoginResponse {
     account: Account;
 }
 
+export interface AccountPagination {
+    data: Account[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
 export interface IQuery {
     _empty(): Nullable<string> | Promise<Nullable<string>>;
     accounts(): Account[] | Promise<Account[]>;
     account(id: string): Account | Promise<Account>;
+    getAllAccounts(filter?: Nullable<AccountFilterInput>): AccountPagination | Promise<AccountPagination>;
     auth(): AuthQuery | Promise<AuthQuery>;
-    courts(courtFilter?: Nullable<CourtFilter>): Court[] | Promise<Court[]>;
-    court(id: string): Court | Promise<Court>;
+    dashboardStats(year: number, searchCourt?: Nullable<string>): DashboardSummary | Promise<DashboardSummary>;
     courtStaffs(): CourtStaff[] | Promise<CourtStaff[]>;
     courtStaff(id: string): CourtStaff | Promise<CourtStaff>;
-    documents(): Document[] | Promise<Document[]>;
-    documentsByCourtId(documentFilter: DocumentFilter): Document[] | Promise<Document[]>;
+    getDocumentsByCourt(filter: GetDocsFilterInput): DocumentPagination | Promise<DocumentPagination>;
     document(id: string): Document | Promise<Document>;
-    documentLists(): DocumentList[] | Promise<DocumentList[]>;
 }
 
 export interface IMutation {
@@ -113,8 +136,11 @@ export interface IMutation {
     changePassword(input: ChangePasswordInput): boolean | Promise<boolean>;
     forgotPassword(email: string): boolean | Promise<boolean>;
     resetPassword(input: ResetPasswordInput): boolean | Promise<boolean>;
-    createMutation(createMutationRequest: DocumentPayload): Document | Promise<Document>;
-    createFromImport(createFromImportRequest: DocumentPayload[]): Document[] | Promise<Document[]>;
+    updateAccount(input: UpdateAccountInput): Account | Promise<Account>;
+    deleteAccount(id: string): boolean | Promise<boolean>;
+    createDocument(input: CreateDocumentInput): Document | Promise<Document>;
+    updateDocument(input: UpdateDocumentInput): Document | Promise<Document>;
+    deleteDocument(id: string): boolean | Promise<boolean>;
 }
 
 export interface AuthQuery {
@@ -125,22 +151,18 @@ export interface AuthQuery {
 export interface Court {
     id: string;
     name: string;
-    address: string;
+    address?: Nullable<string>;
     phone?: Nullable<string>;
     email?: Nullable<string>;
-    courtNumber: number;
-    isDeleted: boolean;
-    staff: CourtStaff[];
-    documentList: DocumentList[];
-    document: Document[];
+    courtNumber?: Nullable<number>;
 }
 
 export interface CourtStaff {
     id: string;
-    court: Court;
     name: string;
     phone?: Nullable<string>;
     avatar?: Nullable<string>;
+    court: Court;
     socialId?: Nullable<string>;
     email?: Nullable<string>;
     operatingArea: string;
@@ -148,31 +170,58 @@ export interface CourtStaff {
     document: Document[];
 }
 
-export interface Document {
+export interface CourtStats {
     id: string;
-    receivedDate: string;
-    documentCode: string;
-    content: string;
-    processProof?: Nullable<string>;
-    processAddress: string;
-    processDeadline: string;
-    processStatus: DocumentStatus;
-    pricePerDocument: number;
-    travelDistance?: Nullable<number>;
-    gasFee?: Nullable<number>;
-    innerTotalPrice?: Nullable<number>;
-    outerTotalPrice?: Nullable<number>;
-    courtStaff?: Nullable<CourtStaff>;
-    note?: Nullable<string>;
-    court: Court;
-    isLate: boolean;
+    name: string;
+    address?: Nullable<string>;
+    waitingCount: number;
+    overdueCount: number;
 }
 
-export interface DocumentList {
+export interface DashboardSummary {
+    totalWaiting: number;
+    totalOverdue: number;
+    totalStaff: number;
+    totalSecretary: number;
+    courts: CourtStats[];
+}
+
+export interface Document {
     id: string;
-    sentByCourt: Court;
-    sentAt: string;
-    fileUrl: string;
+    docCode: string;
+    docType?: Nullable<string>;
+    recipient?: Nullable<string>;
+    address?: Nullable<string>;
+    receivedDate?: Nullable<DateTime>;
+    dueDate?: Nullable<DateTime>;
+    status: DocumentStatus;
+    evidenceUrl?: Nullable<string>;
+    deliveryMethod?: Nullable<string>;
+    responsiblePerson?: Nullable<string>;
+    content?: Nullable<string>;
+    distance?: Nullable<number>;
+    cost?: Nullable<number>;
+    fuelCost?: Nullable<number>;
+    otherCost?: Nullable<number>;
+    totalCost?: Nullable<number>;
+    isOverdue?: Nullable<boolean>;
+    isUrgent?: Nullable<boolean>;
+    court: Court;
+    courtStaff?: Nullable<CourtStaff>;
+}
+
+export interface CourtDocStats {
+    waiting: number;
+    overdue: number;
+}
+
+export interface DocumentPagination {
+    data: Document[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    statHeader: CourtDocStats;
 }
 
 export type DateTime = any;

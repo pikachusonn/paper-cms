@@ -1,32 +1,48 @@
 scalar DateTime
 
+# 1. ENUM TRẠNG THÁI (Chỉ khai báo 1 lần ở đây, file khác tự hiểu)
 enum DocumentStatus {
-  WAITING
-  COMPLETED
-  CONFIRMED
+  WAITING   # Đợi tống đạt
+  COMPLETED # Đã tống đạt (Có bằng chứng)
+  CONFIRMED # Đã xác nhận
 }
 
-# 1. Object cho từng dòng trong bảng danh sách Tòa án
+# 2. TYPE TÒA ÁN & NHÂN VIÊN
+type Court {
+  id: ID!
+  name: String!
+  address: String
+  phone: String
+  email: String
+  courtNumber: Int
+}
+
+# Type nhân viên (Thêm vào để file Document dùng k bị lỗi)
+type CourtStaff {
+  id: ID!
+  name: String!
+  phone: String
+  avatar: String
+}
+
+# 3. OBJECT TRẢ VỀ CHO DASHBOARD (Màn hình 1)
 type CourtStats {
   id: ID!
   name: String!
   address: String
-  # Số liệu tính toán
   waitingCount: Int!    # Cột "Số giấy tờ chưa tống đạt"
   overdueCount: Int!    # Cột "Số giấy tờ đến hạn/quá hạn"
 }
 
-# 2. Object cho thanh thống kê tổng quan (Dashboard Header)
 type DashboardSummary {
   totalWaiting: Int!    # Tổng chưa tống đạt
   totalOverdue: Int!    # Tổng quá hạn
-  totalStaff: Int!      # Nhân viên nhập liệu (Role STAFF)
-  totalSecretary: Int!  # Thư ký (Có thể đếm số user hoặc số thư ký unique trong văn bản)
+  totalStaff: Int!      # Nhân viên nhập liệu
+  totalSecretary: Int!  # Thư ký
   courts: [CourtStats!]! # Danh sách tòa án ở dưới
 }
 
-# 3. Query
+# 4. QUERY DASHBOARD
 type Query {
-  # API lấy tất cả số liệu cho màn hình 1, lọc theo năm
-  dashboardStats(year: Int!): DashboardSummary!
+  dashboardStats(year: Int!, searchCourt: String): DashboardSummary!
 }

@@ -3,9 +3,9 @@ import { CourtService } from './court.service.js';
 import { Mutation } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
-import { CreateDocumentInput } from 'src/interface/court.js';
+import { CreateDocumentInput } from '../interface/court.js';
 import { Role } from '@prisma/client';
-import { Roles } from 'src/decorator/roles.decorator.js';
+import { Roles } from '../decorator/roles.decorator.js';
 
 @Resolver()
 export class CourtResolver {
