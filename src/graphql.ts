@@ -26,10 +26,9 @@ export interface LoginRequest {
 
 export interface CreateAccountInput {
     email: string;
-    role: Role;
-    name: string;
+    fullName: string;
     phone?: Nullable<string>;
-    courtId: string;
+    role?: Nullable<Role>;
 }
 
 export interface ChangePasswordInput {
@@ -49,7 +48,6 @@ export interface AccountFilterInput {
     limit?: Nullable<number>;
     search?: Nullable<string>;
     role?: Nullable<Role>;
-    courtId?: Nullable<string>;
 }
 
 export interface UpdateAccountInput {
@@ -57,8 +55,20 @@ export interface UpdateAccountInput {
     name?: Nullable<string>;
     phone?: Nullable<string>;
     role?: Nullable<Role>;
-    courtId?: Nullable<string>;
     avatar?: Nullable<string>;
+}
+
+export interface CreateCourtInput {
+    name: string;
+    address: string;
+    courtNumber?: Nullable<number>;
+}
+
+export interface CreateOfficialInput {
+    courtId: string;
+    name: string;
+    title?: Nullable<string>;
+    phone?: Nullable<string>;
 }
 
 export interface GetDocsFilterInput {
@@ -78,26 +88,40 @@ export interface CreateDocumentInput {
     address?: Nullable<string>;
     receivedDate?: Nullable<DateTime>;
     dueDate: DateTime;
+    responsibleOfficialId?: Nullable<string>;
     deliveryMethod?: Nullable<string>;
-    responsiblePerson?: Nullable<string>;
     content?: Nullable<string>;
-}
-
-export interface UpdateDocumentInput {
-    id: string;
-    evidenceUrl?: Nullable<string>;
     distance?: Nullable<number>;
     cost?: Nullable<number>;
     fuelCost?: Nullable<number>;
     otherCost?: Nullable<number>;
     totalCost?: Nullable<number>;
+}
+
+export interface UpdateDocumentInput {
+    id: string;
+    docCode?: Nullable<string>;
+    docType?: Nullable<string>;
+    recipient?: Nullable<string>;
+    address?: Nullable<string>;
+    dueDate?: Nullable<DateTime>;
+    responsibleOfficialId?: Nullable<string>;
+    evidenceUrl?: Nullable<string>;
+    deliveryMethod?: Nullable<string>;
+    content?: Nullable<string>;
     status?: Nullable<DocumentStatus>;
+    distance?: Nullable<number>;
+    cost?: Nullable<number>;
+    fuelCost?: Nullable<number>;
+    otherCost?: Nullable<number>;
+    totalCost?: Nullable<number>;
 }
 
 export interface Account {
     id: string;
     email: string;
-    createdAt?: Nullable<DateTime>;
+    fullName?: Nullable<string>;
+    phone?: Nullable<string>;
     avatar?: Nullable<string>;
     role: Role;
 }
@@ -123,6 +147,8 @@ export interface IQuery {
     getAllAccounts(filter?: Nullable<AccountFilterInput>): AccountPagination | Promise<AccountPagination>;
     auth(): AuthQuery | Promise<AuthQuery>;
     dashboardStats(year: number, searchCourt?: Nullable<string>): DashboardSummary | Promise<DashboardSummary>;
+    courts(): Court[] | Promise<Court[]>;
+    court(id: string): Court | Promise<Court>;
     courtStaffs(): CourtStaff[] | Promise<CourtStaff[]>;
     courtStaff(id: string): CourtStaff | Promise<CourtStaff>;
     getDocumentsByCourt(filter: GetDocsFilterInput): DocumentPagination | Promise<DocumentPagination>;
@@ -130,6 +156,7 @@ export interface IQuery {
 }
 
 export interface IMutation {
+    _empty(): Nullable<string> | Promise<Nullable<string>>;
     login(loginRequest: LoginRequest): LoginResponse | Promise<LoginResponse>;
     createAccount(input: CreateAccountInput): Account | Promise<Account>;
     logout(userId: string): boolean | Promise<boolean>;
@@ -138,6 +165,8 @@ export interface IMutation {
     resetPassword(input: ResetPasswordInput): boolean | Promise<boolean>;
     updateAccount(input: UpdateAccountInput): Account | Promise<Account>;
     deleteAccount(id: string): boolean | Promise<boolean>;
+    createCourt(input: CreateCourtInput): Court | Promise<Court>;
+    createCourtOfficial(input: CreateOfficialInput): CourtOfficial | Promise<CourtOfficial>;
     createDocument(input: CreateDocumentInput): Document | Promise<Document>;
     updateDocument(input: UpdateDocumentInput): Document | Promise<Document>;
     deleteDocument(id: string): boolean | Promise<boolean>;
@@ -148,6 +177,13 @@ export interface AuthQuery {
     account?: Account;
 }
 
+export interface CourtOfficial {
+    id: string;
+    name: string;
+    title?: Nullable<string>;
+    phone?: Nullable<string>;
+}
+
 export interface Court {
     id: string;
     name: string;
@@ -155,19 +191,7 @@ export interface Court {
     phone?: Nullable<string>;
     email?: Nullable<string>;
     courtNumber?: Nullable<number>;
-}
-
-export interface CourtStaff {
-    id: string;
-    name: string;
-    phone?: Nullable<string>;
-    avatar?: Nullable<string>;
-    court: Court;
-    socialId?: Nullable<string>;
-    email?: Nullable<string>;
-    operatingArea: string;
-    isDeleted: boolean;
-    document: Document[];
+    officials: CourtOfficial[];
 }
 
 export interface CourtStats {
@@ -186,6 +210,19 @@ export interface DashboardSummary {
     courts: CourtStats[];
 }
 
+export interface CourtStaff {
+    id: string;
+    court: Court;
+    name: string;
+    phone?: Nullable<string>;
+    avatar?: Nullable<string>;
+    socialId?: Nullable<string>;
+    email?: Nullable<string>;
+    operatingArea: string;
+    isDeleted: boolean;
+    document: Document[];
+}
+
 export interface Document {
     id: string;
     docCode: string;
@@ -197,8 +234,9 @@ export interface Document {
     status: DocumentStatus;
     evidenceUrl?: Nullable<string>;
     deliveryMethod?: Nullable<string>;
-    responsiblePerson?: Nullable<string>;
     content?: Nullable<string>;
+    responsibleOfficial?: Nullable<CourtOfficial>;
+    creator?: Nullable<Account>;
     distance?: Nullable<number>;
     cost?: Nullable<number>;
     fuelCost?: Nullable<number>;
@@ -207,7 +245,6 @@ export interface Document {
     isOverdue?: Nullable<boolean>;
     isUrgent?: Nullable<boolean>;
     court: Court;
-    courtStaff?: Nullable<CourtStaff>;
 }
 
 export interface CourtDocStats {

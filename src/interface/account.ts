@@ -8,23 +8,31 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
+// Input tạo mới (Service -> Repository)
+export interface ICreateAccountRepositoryInput {
+  email: string;
+  password: string;
+  name: string; // Sẽ map vào fullName trong DB
+  phone?: string;
+  role?: 'ADMIN' | 'STAFF';
+  avatar?: string;
+}
+
 export interface ICreateAccountServiceInput {
   email: string;
-  role: Role;
   name: string;
   phone?: string;
-  courtId: string;
+  role?: 'ADMIN' | 'STAFF';
+  avatar?: string;
 }
 
-export interface ICreateAccountRepositoryInput extends ICreateAccountServiceInput {
-  password: string;
-}
-
+// Input đổi mật khẩu
 export class IChangePasswordInput {
   @IsString()
   @IsNotEmpty()
@@ -39,7 +47,7 @@ export class IChangePasswordInput {
   newPassword: string;
 }
 
-// --- Interface cho Đặt lại mật khẩu (Quên mật khẩu) ---
+// Input Reset mật khẩu (Quên mật khẩu)
 export class IResetPasswordInput {
   @IsEmail()
   @IsNotEmpty()
@@ -54,6 +62,7 @@ export class IResetPasswordInput {
   newPassword: string;
 }
 
+// Input Lọc danh sách (Dashboard/Admin)
 export class IAccountFilterInput {
   @IsOptional()
   @IsInt()
@@ -72,16 +81,12 @@ export class IAccountFilterInput {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
-
-  @IsOptional()
-  @IsString()
-  courtId?: string;
 }
 
-// 2. Update Input
+// Input Cập nhật thông tin
 export class IUpdateAccountInput {
   @IsString()
-  id: string; // Bắt buộc phải có ID để biết sửa ai
+  id: string;
 
   @IsOptional()
   @IsString()
@@ -94,10 +99,6 @@ export class IUpdateAccountInput {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
-
-  @IsOptional()
-  @IsString()
-  courtId?: string;
 
   @IsOptional()
   @IsString()

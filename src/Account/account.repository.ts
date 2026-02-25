@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../service/prisma.service.js';
 import {
   IAccountFilterInput,
@@ -11,55 +11,51 @@ import { Prisma } from '@prisma/client';
 export class AccountRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  // --- 1. CÁC HÀM TÌM KIẾM CƠ BẢN ---
+
   async findAllAccounts() {
     return await this.prisma.account.findMany();
   }
 
   async findAccountById(id: string) {
     return await this.prisma.account.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
     });
   }
 
   async findAccountByEmail(email: string) {
     return await this.prisma.account.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
     });
   }
 
-  async createAccountWithStaff(data: ICreateAccountRepositoryInput) {
-    const courtExists = await this.prisma.court.findUnique({
-      where: { id: data.courtId },
+  // --- 2. TẠO TÀI KHOẢN (LOGIC MỚI) ---
+
+  async createAccount(data: ICreateAccountRepositoryInput) {
+    // Check email tồn tại (Có thể check ở Service rồi nhưng check lại cho chắc)
+    const existingUser = await this.prisma.account.findUnique({
+      where: { email: data.email },
     });
 
-    if (!courtExists) {
-      throw new NotFoundException('Không tìm thấy Tòa án với ID này!');
+    if (existingUser) {
+      throw new Error('Email này đã được sử dụng!');
     }
+
+    // Tạo Account trực tiếp (Mapping name -> fullName)
     return await this.prisma.account.create({
       data: {
         email: data.email,
-        password: data.password, // Pass đã hash
-        role: data.role,
-
-        courtStaff: {
-          create: {
-            name: data.name,
-            phone: data.phone,
-            court: {
-              connect: { id: data.courtId },
-            },
-          },
-        },
-      },
-      include: {
-        courtStaff: true,
+        password: data.password,
+        fullName: data.name, // Map từ input.name sang db.fullName
+        phone: data.phone,
+        role: data.role || 'STAFF',
+        avatar: data.avatar,
       },
     });
   }
+
+  // --- 3. QUÊN MẬT KHẨU (RESET PASSWORD) ---
+
   async saveResetToken(email: string, token: string, expires: Date) {
     return await this.prisma.account.update({
       where: { email },
@@ -70,40 +66,39 @@ export class AccountRepository {
     });
   }
 
-  // Tìm user bằng mã OTP còn hạn
   async findByResetToken(email: string, token: string) {
     return await this.prisma.account.findFirst({
       where: {
         email: email,
         resetPasswordToken: token,
-        resetPasswordExpires: { gt: new Date() }, // Expires > Hiện tại
+        resetPasswordExpires: { gt: new Date() }, // Còn hạn
       },
     });
   }
 
-  // Cập nhật mật khẩu mới (Reset xong thì xóa luôn token)
   async updatePassword(id: string, newPasswordHash: string) {
     return await this.prisma.account.update({
       where: { id },
       data: {
         password: newPasswordHash,
-        resetPasswordToken: null, // Xóa token dùng rồi
+        resetPasswordToken: null,
         resetPasswordExpires: null,
       },
     });
   }
-  // --- 1. LẤY DANH SÁCH (FILTER & PAGINATION) ---
+
+  // --- 4. LẤY DANH SÁCH (FILTER & PAGINATION) ---
+
   async findAll(filter: IAccountFilterInput) {
-    const { page = 1, limit = 10, search, role, courtId } = filter;
+    // Xử lý default value cho page/limit bằng Nullish Coalescing (??)
+    const page = filter.page ?? 1;
+    const limit = filter.limit ?? 10;
+    const { search, role } = filter;
     const skip = (page - 1) * limit;
 
-    // Xây dựng điều kiện lọc (Where Clause)
+    // Xây dựng điều kiện lọc
     const whereCondition: Prisma.AccountWhereInput = {
-      // Mặc định không lấy những người đã bị xóa (nếu logic account có isDeleted, hiện tại schema account chưa có isDeleted nên ta check staff)
-      courtStaff: {
-        isDeleted: false,
-      },
-      AND: [], // Chuẩn bị mảng điều kiện
+      AND: [],
     };
 
     const andConditions = whereCondition.AND as Prisma.AccountWhereInput[];
@@ -113,30 +108,24 @@ export class AccountRepository {
       andConditions.push({ role: role });
     }
 
-    // Lọc theo Tòa án
-    if (courtId) {
-      andConditions.push({ courtStaff: { courtId: courtId } });
-    }
-
-    // Tìm kiếm (Search) theo Email HOẶC Tên nhân viên
+    // Tìm kiếm (Search) theo Email HOẶC Tên (fullName)
     if (search) {
       andConditions.push({
         OR: [
-          { email: { contains: search } }, // Tìm theo email (MySQL mặc định case-insensitive)
-          { courtStaff: { name: { contains: search } } }, // Tìm theo tên
+          { email: { contains: search } },
+          { fullName: { contains: search } }, // Tìm trực tiếp trên bảng Account
         ],
       });
     }
 
-    // Thực hiện 2 lệnh song song: Đếm tổng + Lấy dữ liệu
+    // Query song song: Đếm tổng + Lấy dữ liệu
     const [total, data] = await Promise.all([
       this.prisma.account.count({ where: whereCondition }),
       this.prisma.account.findMany({
         where: whereCondition,
         take: limit,
         skip: skip,
-        orderBy: { createdAt: 'desc' }, // Người mới nhất lên đầu
-        include: { courtStaff: true }, // Lấy kèm thông tin nhân viên
+        orderBy: { createdAt: 'desc' }, // Mới nhất lên đầu
       }),
     ]);
 
@@ -149,44 +138,30 @@ export class AccountRepository {
     };
   }
 
-  // --- 2. CẬP NHẬT (UPDATE) ---
+  // --- 5. CẬP NHẬT (UPDATE) ---
+
   async updateAccount(data: IUpdateAccountInput) {
-    const { id, name, phone, courtId, avatar, ...accountData } = data;
+    const { id, name, phone, avatar, role } = data;
 
     return await this.prisma.account.update({
       where: { id },
       data: {
-        ...accountData, // Update role, email...
-        courtStaff: {
-          update: {
-            name: name,
-            phone: phone,
-            avatar: avatar,
-            // Nếu có đổi tòa án thì connect lại
-            court: courtId ? { connect: { id: courtId } } : undefined,
-          },
-        },
+        // Chỉ update các trường có gửi lên
+        fullName: name, // Map name -> fullName
+        phone: phone,
+        avatar: avatar,
+        role: role,
       },
-      include: { courtStaff: true },
     });
   }
 
-  // XÓA MỀM (SOFT DELETE)
-  async softDelete(id: string) {
-    // Tìm Staff ID từ Account ID
-    const account = await this.prisma.account.findUnique({
-      where: { id },
-      include: { courtStaff: true },
-    });
+  // --- 6. XÓA TÀI KHOẢN (DELETE) ---
 
-    if (account && account.courtStaff) {
-      await this.prisma.courtStaff.update({
-        where: { id: account.courtStaff.id },
-        data: { isDeleted: true },
-      });
-      // Có thể disable luôn account bằng cách đổi role hoặc thêm field isActive
-      return true;
-    }
-    return false;
+  async deleteAccount(id: string) {
+    // Vì bảng Account mới không có cột isDeleted (theo schema bạn gửi),
+    // nên ta dùng delete cứng. Nếu muốn soft delete, cần thêm cột isDeleted vào DB trước.
+    return await this.prisma.account.delete({
+      where: { id },
+    });
   }
 }

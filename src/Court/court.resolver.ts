@@ -1,26 +1,51 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CourtService } from './court.service.js';
-import { Mutation } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
-import { CreateDocumentInput } from '../interface/court.js';
 import { Role } from '@prisma/client';
+import { RolesGuard } from '../guard/roles.guard.js';
 import { Roles } from '../decorator/roles.decorator.js';
+import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
 
-@Resolver()
+@Resolver('Court')
 export class CourtResolver {
   constructor(private readonly courtService: CourtService) {}
 
+  // --- 1. QUERY ---
+
   @Query('dashboardStats')
   @UseGuards(JwtAuthGuard)
-  async dashboardStats(@Args('year') year: number) {
-    return await this.courtService.getDashboardStats(year);
+  async dashboardStats(
+    @Args('year') year: number,
+    @Args('searchCourt') searchCourt?: string, // Thêm tham số search
+  ) {
+    return await this.courtService.getDashboardStats(year, searchCourt);
   }
 
-  @Mutation('createDocument')
+  @Query('courts')
   @UseGuards(JwtAuthGuard)
-  @Roles(Role.ADMIN, Role.STAFF) // Chỉ ADMIN và USER mới được tạo văn bản
-  async createDocument(@Args('input') input: CreateDocumentInput) {
-    return await this.courtService.createDocument(input);
+  async courts() {
+    return await this.courtService.findAll();
+  }
+
+  @Query('court')
+  @UseGuards(JwtAuthGuard)
+  async court(@Args('id') id: string) {
+    return await this.courtService.findById(id);
+  }
+
+  // --- 2. MUTATION (QUẢN TRỊ VIÊN) ---
+
+  @Mutation('createCourt')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN) // 👮 Chỉ Admin được tạo tòa mới
+  async createCourt(@Args('input') input: any) {
+    return await this.courtService.createCourt(input);
+  }
+
+  @Mutation('createCourtOfficial')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN) // 👮 Chỉ Admin được thêm nhân sự vào tòa
+  async createCourtOfficial(@Args('input') input: any) {
+    return await this.courtService.createCourtOfficial(input);
   }
 }

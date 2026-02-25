@@ -8,7 +8,8 @@ enum Role {
 type Account {
   id: ID!
   email: String!
-  createdAt: DateTime
+  fullName: String
+  phone: String
   avatar: String
   role: Role!
 }
@@ -17,6 +18,14 @@ type LoginResponse {
   accessToken: String!
   refreshToken: String!
   account: Account!
+}
+
+type AccountPagination {
+  data: [Account!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
 }
 
 # --- INPUTS ---
@@ -28,10 +37,10 @@ input LoginRequest {
 
 input CreateAccountInput {
   email: String!
-  role: Role!
-  name: String!
+  fullName: String! # Map vào db
   phone: String
-  courtId: String!
+  role: Role
+  # ĐÃ XÓA courtId
 }
 
 input ChangePasswordInput {
@@ -46,48 +55,49 @@ input ResetPasswordInput {
   newPassword: String!
 }
 
-type AccountPagination {
-  data: [Account!]!
-  total: Int!
-  page: Int!
-  limit: Int!
-  totalPages: Int!
-}
-
 input AccountFilterInput {
   page: Int
   limit: Int
-  search: String   # Tìm theo Tên hoặc Email
+  search: String # Tìm theo Tên hoặc Email
   role: Role
-  courtId: String  # Lọc nhân viên của tòa nào
+  # ĐÃ XÓA courtId (Vì Account k còn thuộc Court)
 }
 
 input UpdateAccountInput {
-  id: ID!          # ID tài khoản cần sửa
-  name: String
+  id: ID! # ID tài khoản cần sửa
+  name: String # Update fullName
   phone: String
   role: Role
-  courtId: String  # Chuyển công tác sang tòa khác (nếu cần)
   avatar: String
+  # ĐÃ XÓA courtId
 }
 
 # --- QUERY ---
-# Giữ nguyên logic _empty nếu bạn dùng nó làm root,
-# nhưng thường ta gom các query vào extend type Query
+
 type Query {
+  # Root Query (Nên để rỗng hoặc _empty để các file khác extend)
   _empty: String
 }
 
 extend type Query {
+  # Lấy danh sách tất cả (cho dropdown nếu cần)
   accounts: [Account!]!
+
+  # Lấy chi tiết 1 user
   account(id: ID!): Account!
+
+  # Lấy danh sách phân trang (Màn hình Quản lý nhân sự)
   getAllAccounts(filter: AccountFilterInput): AccountPagination!
 }
 
-# --- MUTATION (GỘP TẤT CẢ VÀO ĐÂY) ---
-# Sửa lỗi: Thay vì viết type rồi extend nhiều lần, hãy viết hết vào 1 chỗ
+# --- MUTATION ---
 
 type Mutation {
+  # Root Mutation
+  _empty: String
+}
+
+extend type Mutation {
   # 1. Login
   login(loginRequest: LoginRequest!): LoginResponse!
 
@@ -108,7 +118,7 @@ type Mutation {
 
   # 7. Cập nhật thông tin
   updateAccount(input: UpdateAccountInput!): Account!
-  
-  # 8. Xóa mềm user (Soft Delete)
+
+  # 8. Xóa tài khoản
   deleteAccount(id: ID!): Boolean!
 }

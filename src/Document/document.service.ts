@@ -1,55 +1,69 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DocumentRepository } from './document.repository.js';
-import * as graphql from '../graphql.js';
-import {
-  DocumentCreateInput,
-  DocumentCreateManyInput,
-} from '../generated/prisma/models.js';
+
 @Injectable()
 export class DocumentService {
   constructor(private readonly documentRepository: DocumentRepository) {}
 
+  /**
+   * 1. Lấy danh sách văn bản theo bộ lọc (Dashboard)
+   */
   async getDocumentsByCourt(filter: any) {
-    // Gọi hàm bên Repository (Hàm này đã xử lý logic lọc + phân trang + đếm số liệu)
-    // Lưu ý: Đảm bảo bên DocumentRepository bạn đã copy đoạn code xử lý filter mới nhất
+    // Repository đã xử lý phân trang, lọc theo năm/trạng thái và đếm số liệu
     return await this.documentRepository.findDocumentByCourtId(filter);
   }
 
   /**
-   * Lấy chi tiết 1 văn bản
+   * 2. Lấy chi tiết 1 văn bản
    */
   async getDocumentById(id: string) {
-    return await this.documentRepository.findDocumentById(id);
+    const doc = await this.documentRepository.findDocumentById(id);
+    if (!doc) {
+      throw new NotFoundException('Văn bản không tồn tại hoặc đã bị xóa');
+    }
+    return doc;
   }
 
   /**
-   * Tạo mới văn bản (Logic mapping input -> DB đã nằm trong Repository)
+   * 3. Tạo mới văn bản
    */
   async createDocument(input: any) {
-    // Không cần map tay từng trường như code cũ nữa
-    // Repository.createSingleDocument đã có hàm sanitizePayload để lo việc này
+    // Input nhận vào đã có creatorId (từ token) và responsibleOfficialId (từ dropdown)
+    // Repository sẽ lo việc sanitize (làm sạch) và mapping dữ liệu
     return await this.documentRepository.createSingleDocument(input);
   }
 
   /**
-   * Cập nhật văn bản (Dùng cho popup sửa / nhập kết quả tống đạt)
+   * 4. Cập nhật văn bản (Sửa thông tin / Nhập kết quả tống đạt)
    */
   async updateDocument(input: any) {
-    // Bạn cần viết thêm hàm updateDocument bên Repository tương tự create
-    // return await this.documentRepository.updateDocument(input);
-    return null; // Placeholder để code không báo lỗi nếu chưa làm
+    // Kiểm tra văn bản có tồn tại không trước khi sửa
+    const exist = await this.documentRepository.findDocumentById(input.id);
+    if (!exist) {
+      throw new NotFoundException(`Không tìm thấy văn bản có ID: ${input.id}`);
+    }
+
+    // Gọi Repository để update
+    // (Logic tự động chuyển trạng thái sang COMPLETED nếu có ảnh đã nằm trong Repo)
+    return await this.documentRepository.updateDocument(input);
   }
 
   /**
-   * Xóa văn bản
+   * 5. Xóa văn bản
    */
   async deleteDocument(id: string) {
-    // return await this.documentRepository.deleteDocument(id);
-    return true; // Placeholder
+    // Kiểm tra tồn tại
+    const exist = await this.documentRepository.findDocumentById(id);
+    if (!exist) {
+      throw new NotFoundException(`Không tìm thấy văn bản có ID: ${id}`);
+    }
+
+    return await this.documentRepository.deleteDocument(id);
   }
 
-  // --- GIỮ LẠI CÁC HÀM CŨ NẾU CẦN TƯƠNG THÍCH (Optional) ---
-  // Nếu bạn muốn giữ lại hàm createMultiDocument cho tính năng Import Excel sau này:
+  /**
+   * 6. Tạo nhiều văn bản (Dùng cho tính năng Import Excel)
+   */
   async createMultiDocument(inputs: any[]) {
     return await this.documentRepository.createMultiDocument(inputs);
   }

@@ -9,6 +9,7 @@ import {
 import { UseGuards } from '@nestjs/common';
 import { DocumentStatus } from '@prisma/client';
 import { DocumentService } from './document.service.js';
+import { CurrentUser } from '../decorator/current-user.decorator.js';
 import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
 
 @Resolver('Document')
@@ -20,7 +21,6 @@ export class DocumentResolver {
   @Query('getDocumentsByCourt')
   @UseGuards(JwtAuthGuard)
   async getDocumentsByCourt(@Args('filter') filter: any) {
-    // Tên tham số trong Schema là 'filter', nên ở đây @Args('filter')
     return await this.documentService.getDocumentsByCourt(filter);
   }
 
@@ -34,32 +34,46 @@ export class DocumentResolver {
 
   @Mutation('createDocument')
   @UseGuards(JwtAuthGuard)
-  async createDocument(@Args('input') input: any) {
-    // Tên tham số trong Schema là 'input', nên ở đây @Args('input')
-    return await this.documentService.createDocument(input);
+  async createDocument(
+    @Args('input') input: any,
+    @CurrentUser() user: any, // 👇 Lấy User từ Token
+  ) {
+    // 👇 Gán creatorId = ID người đang đăng nhập
+    const payload = {
+      ...input,
+      creatorId: user.sub,
+    };
+    return await this.documentService.createDocument(payload);
   }
 
-  // Lưu ý: Mutation 'createFromImport' đã bị bỏ trong Schema mới
-  // Nên tôi xóa đi để tránh lỗi "defined in resolver but not in schema"
+  // 👇 Bổ sung Update (Nếu thiếu sẽ lỗi server)
+  @Mutation('updateDocument')
+  @UseGuards(JwtAuthGuard)
+  async updateDocument(@Args('input') input: any) {
+    return await this.documentService.updateDocument(input);
+  }
+
+  // 👇 Bổ sung Delete (Nếu thiếu sẽ lỗi server)
+  @Mutation('deleteDocument')
+  @UseGuards(JwtAuthGuard)
+  async deleteDocument(@Args('id') id: string) {
+    return await this.documentService.deleteDocument(id);
+  }
 
   // --- 3. FIELD TÍNH TOÁN (ResolveField) ---
 
-  // Tính toán trường 'isOverdue' (Thay cho isLate cũ)
   @ResolveField('isOverdue')
   isOverdue(@Parent() doc: any): boolean {
-    // Logic: Nếu đã xong (COMPLETED/CONFIRMED) thì ko bao giờ quá hạn
     if (
       doc.status === DocumentStatus.COMPLETED ||
       doc.status === DocumentStatus.CONFIRMED
     ) {
       return false;
     }
-    // Logic: Nếu chưa xong mà Hạn < Hiện tại -> Quá hạn
-    // Lưu ý: DB mới dùng field 'dueDate', ko phải 'processDeadline'
+    // So sánh ngày hiện tại với dueDate
     return new Date(doc.dueDate) < new Date();
   }
 
-  // Tính toán trường 'isUrgent' (Sắp đến hạn trong 24h)
   @ResolveField('isUrgent')
   isUrgent(@Parent() doc: any): boolean {
     if (

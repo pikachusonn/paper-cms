@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { Role } from '@prisma/client'; // Import Enum Role từ Prisma
+import { Role } from '@prisma/client';
 import { AccountService } from './account.service.js';
 import {
   IAccountFilterInput,
@@ -8,8 +8,6 @@ import {
   IResetPasswordInput,
   IUpdateAccountInput,
 } from '../interface/account.js';
-
-// Import các "vệ sĩ" (Guards) và Decorator
 import { RolesGuard } from '../guard/roles.guard.js';
 import { Roles } from '../decorator/roles.decorator.js';
 import { CurrentUser } from '../decorator/current-user.decorator.js';
@@ -62,7 +60,7 @@ export class AccountResolver {
     @Args('input') input: IChangePasswordInput,
     @CurrentUser() user: any,
   ) {
-    input.userId = user.id;
+    input.userId = user.userId;
     return await this.accountService.changePassword(input);
   }
 

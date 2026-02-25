@@ -13,7 +13,7 @@ import { ACCESS_JWT, REFRESH_JWT } from '../utils/jwt.providers.js';
 import {
   IAccountFilterInput,
   IChangePasswordInput,
-  ICreateAccountServiceInput,
+  ICreateAccountServiceInput, // Import cái này từ interface/account.ts
   IResetPasswordInput,
   IUpdateAccountInput,
   LoginRequest,
@@ -21,9 +21,11 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { MailService } from '../mail/mail.service.js';
 import { PrismaService } from '../service/prisma.service.js';
+
 @Injectable()
 export class AccountService {
   private readonly logger = new Logger(AccountService.name);
+
   constructor(
     private readonly accountRepository: AccountRepository,
     @Inject(ACCESS_JWT) private readonly accessJwt: JwtService,
@@ -31,6 +33,8 @@ export class AccountService {
     private readonly mailService: MailService,
     private readonly prisma: PrismaService,
   ) {}
+
+  // --- 1. FIND & LOGIN ---
 
   async findAllAccounts() {
     return await this.accountRepository.findAllAccounts();
@@ -60,6 +64,7 @@ export class AccountService {
 
     const accessToken = await this.accessJwt.signAsync(payload);
     const refreshToken = await this.refreshJwt.signAsync(payload);
+
     return {
       accessToken,
       refreshToken,
@@ -67,8 +72,10 @@ export class AccountService {
     };
   }
 
-  //Hàm tiện ích: Tự sinh mật khẩu ngẫu nhiên (8 ký tự)
-  private generateRandomPassword(length: number = 8): string {
+  // --- 2. CREATE ACCOUNT (LOGIC MỚI) ---
+
+  // Hàm helper sinh pass ngẫu nhiên
+  private generateRandomPassword(length: number = 10): string {
     const charset =
       'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#';
     let retVal = '';
@@ -78,19 +85,26 @@ export class AccountService {
     return retVal;
   }
 
-  async createAccount(input: Omit<ICreateAccountServiceInput, 'password'>) {
-    const courtExists = await this.prisma.court.findUnique({
-      where: { id: input.courtId },
-    });
-    if (!courtExists) throw new NotFoundException('Không tìm thấy Tòa án!');
+  async createAccount(input: ICreateAccountServiceInput) {
+    // Check email tồn tại
     const exist = await this.accountRepository.findAccountByEmail(input.email);
     if (exist) throw new ConflictException('Email này đã tồn tại!');
+
+    // Sinh mật khẩu & Hash
     const randomPassword = this.generateRandomPassword(10);
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
-    const newAccount = await this.accountRepository.createAccountWithStaff({
-      ...input,
+
+    // Tạo Account mới (Không còn courtId)
+    const newAccount = await this.accountRepository.createAccount({
+      email: input.email,
       password: hashedPassword,
+      name: input.name, // Mapping sang fullName
+      phone: input.phone,
+      role: input.role,
+      avatar: input.avatar,
     });
+
+    // Gửi email thông báo
     try {
       await this.mailService.sendUserCredentials(
         input.email,
@@ -102,40 +116,44 @@ export class AccountService {
       this.logger.error(
         `LỖI GỬI MAIL: Không thể gửi mật khẩu đến ${input.email}`,
       );
-      this.logger.warn(
-        `Vui lòng thông báo thủ công cho nhân viên. Mật khẩu là: ${randomPassword}`,
-      );
+      this.logger.warn(`Mật khẩu là: ${randomPassword}`);
       this.logger.error(error.message);
     }
 
     return newAccount;
   }
-  // --- 1. LOGOUT ---
+
+  // --- 3. LOGOUT ---
   async logout(userId: string) {
-    return true;
+    return true; // Có thể implement blacklist token nếu cần
   }
 
-  // --- 2. CHANGE PASSWORD (Đổi mật khẩu chủ động) ---
+  // --- 4. CHANGE PASSWORD ---
   async changePassword(input: IChangePasswordInput) {
     const user = await this.accountRepository.findAccountById(input.userId);
     if (!user) throw new NotFoundException('Tài khoản không tồn tại');
+
     const isMatch = await bcrypt.compare(input.oldPassword, user.password);
     if (!isMatch)
       throw new UnauthorizedException('Mật khẩu cũ không chính xác');
+
     const newHash = await bcrypt.hash(input.newPassword, 10);
     await this.accountRepository.updatePassword(user.id, newHash);
 
     return true;
   }
 
-  // FORGOT PASSWORD (Gửi OTP) ---
+  // --- 5. FORGOT PASSWORD ---
   async forgotPassword(email: string) {
     const user = await this.accountRepository.findAccountByEmail(email);
     if (!user)
       throw new NotFoundException('Email không tồn tại trong hệ thống');
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 15 * 60 * 1000);
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
     await this.accountRepository.saveResetToken(email, otp, expires);
+
     try {
       await this.mailService.sendResetPassword(email, otp);
       return true;
@@ -145,24 +163,26 @@ export class AccountService {
     }
   }
 
-  // RESET PASSWORD (Xác nhận OTP và đổi pass) ---
   async resetPassword(input: IResetPasswordInput) {
-    // a. Tìm user có email và OTP khớp, và còn hạn
+    // Tìm user bằng Token/OTP còn hạn
     const user = await this.accountRepository.findByResetToken(
       input.email,
-      input.otp,
+      input.otp, // Ở đây token chính là OTP
     );
 
     if (!user) {
       throw new BadRequestException('Mã OTP không đúng hoặc đã hết hạn');
     }
 
-    // b. Hash pass mới và cập nhật
+    // Hash pass mới và cập nhật
     const newHash = await bcrypt.hash(input.newPassword, 10);
     await this.accountRepository.updatePassword(user.id, newHash);
 
     return true;
   }
+
+  // --- 6. MANAGEMENT (List, Update, Delete) ---
+
   async getAllAccounts(filter: IAccountFilterInput) {
     return await this.accountRepository.findAll(filter);
   }
@@ -173,6 +193,8 @@ export class AccountService {
   }
 
   async deleteAccount(id: string) {
-    return await this.accountRepository.softDelete(id);
+    // Logic mới: Xóa cứng (Delete) thay vì Xóa mềm (Soft Delete)
+    // Nếu muốn Soft Delete thì cần thêm field isDeleted vào DB trước
+    return await this.accountRepository.deleteAccount(id);
   }
 }

@@ -1,118 +1,143 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../service/prisma.service.js';
-import { DocumentStatus, Role } from '@prisma/client';
-import { CreateDocumentInput } from 'src/interface/court.js';
+import * as graphql from '../graphql.js';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CourtRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  // --- 1. QUERY CƠ BẢN ---
+
+  async findAll() {
+    return await this.prisma.court.findMany({
+      where: { isDeleted: false },
+      include: {
+        officials: true, // Lấy kèm danh sách nhân sự để hiển thị dropdown
+      },
+    });
+  }
+
+  async findById(id: string) {
+    return await this.prisma.court.findUnique({
+      where: { id },
+      include: {
+        officials: true,
+      },
+    });
+  }
+
+  // --- 2. TẠO DỮ LIỆU (Tòa & Nhân sự) ---
+
+  async createCourt(input: graphql.CreateCourtInput) {
+    //graphql.CreateCourtInput
+    return await this.prisma.court.create({
+      data: {
+        name: input.name,
+        address: input.address,
+        courtNumber: input.courtNumber ?? 0,
+      },
+    });
+  }
+
+  async createCourtOfficial(input: graphql.CreateOfficialInput) {
+    //graphql.CreateOfficialInput
+    // Check tòa tồn tại
+    const courtExists = await this.prisma.court.findUnique({
+      where: { id: input.courtId },
+    });
+    if (!courtExists) {
+      throw new Error('Không tìm thấy Tòa án với ID này');
+    }
+
+    return await this.prisma.courtOfficial.create({
+      data: {
+        courtId: input.courtId,
+        name: input.name,
+        title: input.title,
+        phone: input.phone,
+      },
+    });
+  }
+
+  // --- 3. THỐNG KÊ DASHBOARD (Logic Mới) ---
+
   async getDashboardStats(year: number, searchCourt?: string) {
-    // 1. Xác định phạm vi thời gian (Filter theo năm người dùng chọn)
-    // Ví dụ: 2024 -> Từ 2024-01-01 đến 2024-12-31
+    // 1. Xác định thời gian
     const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
     const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
-    const now = new Date(); // Dùng để tính logic quá hạn
+    const now = new Date();
 
-    // 2. Query Tòa án + Kèm theo các văn bản TRONG NĂM ĐÓ
+    // 2. Lấy danh sách tòa
+    const whereCourt: Prisma.CourtWhereInput = { isDeleted: false };
+    if (searchCourt) {
+      whereCourt.name = { contains: searchCourt };
+    }
+
+    // Lấy danh sách tòa án
     const courts = await this.prisma.court.findMany({
-      where: {
-        isDeleted: false,
-        // Nếu ở ngoài có ô tìm kiếm tên tòa án thì thêm dòng này
-        name: searchCourt ? { contains: searchCourt } : undefined,
-      },
-      include: {
-        documents: {
+      where: whereCourt,
+    });
+
+    // 3. Tính toán số liệu cho từng tòa
+    // Dùng Promise.all để query song song cho nhanh
+    const formattedCourts = await Promise.all(
+      courts.map(async (court) => {
+        // Đếm số Waiting trong năm
+        const waitingCount = await this.prisma.document.count({
           where: {
-            // 👇 QUAN TRỌNG: Chỉ lấy văn bản nhận trong năm được chọn
-            receivedDate: {
-              gte: startDate,
-              lte: endDate,
-            },
-            // Loại bỏ những cái đã xác nhận (coi như xong hẳn, k tính vào tồn đọng)
-            status: { not: DocumentStatus.CONFIRMED },
+            courtId: court.id,
+            receivedDate: { gte: startDate, lte: endDate },
+            status: 'WAITING',
           },
-          select: {
-            status: true,
-            dueDate: true,
+        });
+
+        // Đếm số Quá hạn trong năm
+        const overdueCount = await this.prisma.document.count({
+          where: {
+            courtId: court.id,
+            receivedDate: { gte: startDate, lte: endDate },
+            status: { notIn: ['COMPLETED', 'CONFIRMED'] }, // Chưa xong
+            dueDate: { lt: now }, // Và đã quá hạn
           },
-        },
-      },
-      orderBy: { courtNumber: 'asc' },
-    });
+        });
 
-    // 3. Tính toán số liệu (Loop qua kết quả đã lọc để cộng dồn)
-    let totalWaiting = 0; // Tổng chưa tống đạt (Số to trên cùng)
-    let totalOverdue = 0; // Tổng quá hạn (Số to trên cùng)
+        return {
+          id: court.id,
+          name: court.name,
+          address: court.address,
+          waitingCount,
+          overdueCount,
+        };
+      }),
+    );
 
-    const formattedCourts = courts.map((court) => {
-      const docs = court.documents || [];
+    // 4. Cộng dồn tổng số liệu Header
+    const totalWaiting = formattedCourts.reduce(
+      (acc, c) => acc + c.waitingCount,
+      0,
+    );
+    const totalOverdue = formattedCourts.reduce(
+      (acc, c) => acc + c.overdueCount,
+      0,
+    );
 
-      // A. Đếm số "Chưa tống đạt" (Trong năm đó)
-      const waitingCount = docs.filter(
-        (d) => d.status === DocumentStatus.WAITING,
-      ).length;
-
-      // B. Đếm số "Đến hạn/Quá hạn" (Trong năm đó)
-      // Logic: Chưa xong (Waiting/Completed chưa duyệt) VÀ Hạn < Hiện tại
-      const overdueCount = docs.filter(
-        (d) =>
-          d.status !== DocumentStatus.CONFIRMED && new Date(d.dueDate) <= now,
-      ).length;
-
-      // Cộng dồn vào số liệu tổng của toàn hệ thống
-      totalWaiting += waitingCount;
-      totalOverdue += overdueCount;
-
-      return {
-        id: court.id,
-        name: court.name,
-        address: court.address,
-        waitingCount, // Số liệu của riêng tòa này
-        overdueCount, // Số liệu của riêng tòa này
-      };
-    });
-
-    // 4. Các số liệu tĩnh khác (Nhân sự) - Cái này đếm toàn hệ thống k theo năm
+    // Đếm nhân viên nhập liệu (Account Role STAFF)
     const totalStaff = await this.prisma.account.count({
-      where: { role: Role.STAFF },
+      where: { role: 'STAFF' },
     });
 
-    // Giả sử đếm Admin là Thư ký
-    const totalSecretary = await this.prisma.account.count({
-      where: { role: Role.ADMIN },
+    // Đếm thư ký tòa án (Bảng CourtOfficial) - Sửa logic cũ đếm Admin
+    const totalSecretary = await this.prisma.courtOfficial.count({
+      where: { isDeleted: false },
     });
 
     return {
-      totalWaiting, // Trả về số to trên cùng
-      totalOverdue, // Trả về số to trên cùng
+      totalWaiting,
+      totalOverdue,
       totalStaff,
       totalSecretary,
-      courts: formattedCourts, // Danh sách bảng ở dưới
+      courts: formattedCourts,
     };
-  }
-
-  async createDocument(data: CreateDocumentInput) {
-    return await this.prisma.document.create({
-      data: {
-        court: { connect: { id: data.courtId } }, // Link với Tòa án
-        docCode: data.docCode,
-        docType: data.docType,
-        recipient: data.recipient,
-        address: data.address,
-
-        // Xử lý ngày tháng (vì Input là String nên cần ép kiểu về Date)
-        receivedDate: data.receivedDate
-          ? new Date(data.receivedDate)
-          : new Date(),
-        dueDate: new Date(data.dueDate),
-
-        deliveryMethod: data.deliveryMethod,
-        responsiblePerson: data.responsiblePerson,
-        content: data.content,
-
-        // Các trường mặc định (Status=WAITING, Cost=0...) đã set trong Schema nên không cần điền
-      },
-    });
   }
 }
