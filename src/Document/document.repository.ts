@@ -8,26 +8,37 @@ export class DocumentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   // --- 1. LẤY DANH SÁCH & THỐNG KÊ (Dashboard) ---
-  async findDocumentByCourtId(filter: graphql.GetDocsFilterInput) {
-    // Fix lỗi null/undefined bằng Nullish Coalescing (??)
+  async findDocumentByCourtId(filter: any) {
+    // Dùng any tạm hoặc update lại type GetDocsFilterInput
     const page = filter.page ?? 1;
     const limit = filter.limit ?? 10;
-    const { courtId, year, status, search } = filter;
+    const { courtId, fromDate, toDate, status, search } = filter;
     const skip = (page - 1) * limit;
-
-    // 1. Tính toán ngày đầu năm - cuối năm
-    const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
-    const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
     const now = new Date();
 
-    // 2. Xây dựng điều kiện lọc (Where Clause)
+    // 1. Xây dựng điều kiện lọc ngày tháng linh hoạt
+    const dateCondition: any = {};
+    if (fromDate) {
+      const start = new Date(fromDate);
+      start.setHours(0, 0, 0, 0); // Lấy từ 00:00:00 của ngày bắt đầu
+      dateCondition.gte = start;
+    }
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999); // Lấy đến 23:59:59 của ngày kết thúc
+      dateCondition.lte = end;
+    }
+
+    // 2. Xây dựng Where Clause
     const where: Prisma.DocumentWhereInput = {
       courtId: courtId,
-      receivedDate: {
-        gte: startDate,
-        lte: endDate,
-      },
+      isDeleted: false,
     };
+
+    // Chỉ gán điều kiện receivedDate nếu FE có truyền fromDate hoặc toDate
+    if (Object.keys(dateCondition).length > 0) {
+      where.receivedDate = dateCondition;
+    }
 
     if (status) {
       where.status = status as DocumentStatus;
@@ -40,12 +51,10 @@ export class DocumentRepository {
       ];
     }
 
-    // 3. Thực hiện Query song song
+    // 3. Thực thi query song song
     const [total, documents, statsWaiting, statsOverdue] = await Promise.all([
-      // Đếm tổng
       this.prisma.document.count({ where }),
 
-      // Lấy dữ liệu
       this.prisma.document.findMany({
         where,
         skip,
@@ -53,27 +62,31 @@ export class DocumentRepository {
         orderBy: { receivedDate: 'desc' },
         include: {
           court: true,
-          // 👇 MỚI: Lấy thông tin người chịu trách nhiệm (Fake Role)
           responsibleOfficial: true,
-          // 👇 MỚI: Lấy thông tin người nhập liệu (User thật)
           creator: true,
         },
       }),
 
-      // Đếm Waiting
+      // Đếm Waiting trong khoảng thời gian
       this.prisma.document.count({
         where: {
           courtId,
-          receivedDate: { gte: startDate, lte: endDate },
+          isDeleted: false,
+          ...(Object.keys(dateCondition).length > 0 && {
+            receivedDate: dateCondition,
+          }),
           status: DocumentStatus.WAITING,
         },
       }),
 
-      // Đếm Overdue (Quá hạn)
+      // Đếm Overdue trong khoảng thời gian
       this.prisma.document.count({
         where: {
           courtId,
-          receivedDate: { gte: startDate, lte: endDate },
+          isDeleted: false,
+          ...(Object.keys(dateCondition).length > 0 && {
+            receivedDate: dateCondition,
+          }),
           status: {
             notIn: [DocumentStatus.COMPLETED, DocumentStatus.CONFIRMED],
           },
@@ -82,7 +95,6 @@ export class DocumentRepository {
       }),
     ]);
 
-    // 4. Trả về kết quả
     return {
       data: documents,
       total,
@@ -99,10 +111,10 @@ export class DocumentRepository {
   // --- 2. LẤY CHI TIẾT 1 VĂN BẢN ---
   async findDocumentById(id: string) {
     return await this.prisma.document.findUnique({
-      where: { id },
+      // 👇 MỚI: Không lấy văn bản đã xóa
+      where: { id, isDeleted: false },
       include: {
         court: true,
-        // 👇 Sửa include theo schema mới
         responsibleOfficial: true,
         creator: true,
       },
@@ -130,18 +142,24 @@ export class DocumentRepository {
   async updateDocument(input: any) {
     const { id, ...data } = input;
 
-    // Logic: Nếu có ảnh bằng chứng mà chưa set status -> Tự động COMPLETED
+    // Logic Tự động đổi Status dựa vào ảnh bằng chứng
     let statusToUpdate = data.status;
-    if (data.evidenceUrl && !statusToUpdate) {
-      statusToUpdate = DocumentStatus.COMPLETED;
+    if (data.evidenceUrl) {
+      statusToUpdate = DocumentStatus.COMPLETED; // Có ảnh -> Xong
+    } else if (data.evidenceUrl === '' || data.evidenceUrl === null) {
+      statusToUpdate = DocumentStatus.WAITING; // Xóa ảnh -> Chờ
     }
 
     return await this.prisma.document.update({
       where: { id },
       data: {
-        // Map các trường update
+        docCode: data.docCode,
+        docType: data.docType,
         recipient: data.recipient,
         address: data.address,
+        receivedDate: data.receivedDate
+          ? new Date(data.receivedDate)
+          : undefined,
         dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
 
         deliveryMethod: data.deliveryMethod,
@@ -149,13 +167,15 @@ export class DocumentRepository {
         content: data.content,
         status: statusToUpdate,
 
+        // 👇 MỚI: Cập nhật 7 trường chi phí mới
         distance: data.distance,
-        cost: data.cost,
-        fuelCost: data.fuelCost,
-        otherCost: data.otherCost,
-        totalCost: data.totalCost,
+        deliveryFee: data.deliveryFee,
+        accommodationFee: data.accommodationFee,
+        fuelFee: data.fuelFee,
+        otherFee: data.otherFee,
+        totalFeeInternal: data.totalFeeInternal,
+        totalFeeExternal: data.totalFeeExternal,
 
-        // Cập nhật quan hệ nếu có thay đổi ID
         responsibleOfficial: data.responsibleOfficialId
           ? { connect: { id: data.responsibleOfficialId } }
           : undefined,
@@ -170,8 +190,10 @@ export class DocumentRepository {
 
   // --- 5. XÓA (Delete) ---
   async deleteDocument(id: string) {
-    return await this.prisma.document.delete({
+    // 👇 MỚI: Chuyển từ Hard Delete sang Soft Delete
+    return await this.prisma.document.update({
       where: { id },
+      data: { isDeleted: true },
     });
   }
 
@@ -180,43 +202,68 @@ export class DocumentRepository {
    */
   private sanitizePayload(input: any): Prisma.DocumentUncheckedCreateInput {
     return {
-      // 1. Thông tin chung
       docCode: input.docCode,
       docType: input.docType,
       recipient: input.recipient,
       address: input.address,
-      content: input.content, // Schema mới dùng 'content'
+      content: input.content,
 
-      // 2. Ngày tháng
       receivedDate: input.receivedDate
         ? new Date(input.receivedDate)
         : new Date(),
-      // Ưu tiên 'dueDate', fallback về 'processDeadline' nếu FE gửi code cũ
       dueDate: input.dueDate
         ? new Date(input.dueDate)
         : input.processDeadline
           ? new Date(input.processDeadline)
           : new Date(),
 
-      // 3. Chi phí (Default = 0)
-      distance: input.distance ?? input.travelDistance ?? 0,
-      cost: input.cost ?? input.pricePerDocument ?? 0,
-      fuelCost: input.fuelCost ?? input.gasFee ?? 0,
-      otherCost: input.otherCost ?? input.otherFee ?? 0,
-      totalCost: input.totalCost ?? input.outerTotalPrice ?? 0,
+      // 👇 MỚI: Map 7 trường chi phí mới
+      distance: input.distance ?? 0,
+      deliveryFee: input.deliveryFee ?? 0,
+      accommodationFee: input.accommodationFee ?? 0,
+      fuelFee: input.fuelCost ?? input.fuelFee ?? 0,
+      otherFee: input.otherCost ?? input.otherFee ?? 0,
+      totalFeeInternal: input.totalFeeInternal ?? 0,
+      totalFeeExternal: input.totalFeeExternal ?? 0,
 
-      // 4. Kết quả
       deliveryMethod: input.deliveryMethod,
       evidenceUrl: input.evidenceUrl ?? input.processProof,
 
-      // 5. Quan hệ (QUAN TRỌNG NHẤT)
       courtId: input.courtId,
-
-      // 👇 Map ID người chịu trách nhiệm (Fake Role)
       responsibleOfficialId: input.responsibleOfficialId ?? null,
-
-      // 👇 Map ID người tạo (User Token)
       creatorId: input.creatorId ?? null,
     };
+  }
+
+  async findOfficialsByCourtId(courtId: string) {
+    return await this.prisma.courtOfficial.findMany({
+      where: {
+        courtId: courtId,
+        isDeleted: false, // Lọc nhân viên đã nghỉ/bị xóa
+      },
+      orderBy: { name: 'asc' }, // Sắp xếp theo ABC cho dễ tìm
+    });
+  }
+
+  // --- LẤY DANH SÁCH NHÂN SỰ THEO NHIỀU TÒA ÁN CÙNG LÚC (Dùng cho Import) ---
+  async findOfficialsByCourtIds(courtIds: string[]) {
+    return await this.prisma.courtOfficial.findMany({
+      where: {
+        courtId: { in: courtIds },
+        isDeleted: false,
+      },
+      select: { id: true, name: true, courtId: true }, // Chỉ lấy đúng 3 trường cần thiết cho nhẹ RAM
+    });
+  }
+  // --- KIỂM TRA CÁC MÃ ĐÃ TỒN TẠI ---
+  async findExistingDocs(codes: string[], courtIds: string[]) {
+    return await this.prisma.document.findMany({
+      where: {
+        docCode: { in: codes },
+        courtId: { in: courtIds },
+        isDeleted: false,
+      },
+      select: { docCode: true, courtId: true }, // Chỉ lấy 2 trường này để check cho nhẹ
+    });
   }
 }

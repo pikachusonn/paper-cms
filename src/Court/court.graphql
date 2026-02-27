@@ -14,6 +14,7 @@ type CourtOfficial {
   name: String! # VD: Thư ký Hồng Vân
   title: String # VD: Thư ký, Thẩm phán
   phone: String
+  isDeleted: Boolean! # Đánh dấu đã xóa (soft delete)
 }
 
 # 3. TYPE TÒA ÁN
@@ -52,6 +53,15 @@ input CreateCourtInput {
   name: String!
   address: String!
   courtNumber: Int
+  phone: String
+  email: String
+}
+
+input UpdateOfficialInput {
+  id: ID!
+  name: String
+  title: String
+  phone: String
 }
 
 # 👇 Input tạo nhân sự tòa án (Admin nhập liệu ban đầu)
@@ -81,4 +91,7 @@ extend type Mutation {
 
   # 👇 Tạo nhân sự cho tòa (Để sau này có người mà chọn)
   createCourtOfficial(input: CreateOfficialInput!): CourtOfficial!
+
+  updateCourtOfficial(input: UpdateOfficialInput!): CourtOfficial!
+  deleteCourtOfficial(id: ID!): Boolean!
 }

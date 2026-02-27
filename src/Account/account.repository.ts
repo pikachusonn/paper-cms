@@ -4,8 +4,10 @@ import {
   IAccountFilterInput,
   ICreateAccountRepositoryInput,
   IUpdateAccountInput,
-} from 'src/interface/account.js';
+  IUpdateProfileInput,
+} from '../interface/account.js';
 import { Prisma } from '@prisma/client';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AccountRepository {
@@ -158,10 +160,52 @@ export class AccountRepository {
   // --- 6. XÓA TÀI KHOẢN (DELETE) ---
 
   async deleteAccount(id: string) {
-    // Vì bảng Account mới không có cột isDeleted (theo schema bạn gửi),
-    // nên ta dùng delete cứng. Nếu muốn soft delete, cần thêm cột isDeleted vào DB trước.
-    return await this.prisma.account.delete({
+    return await this.prisma.account.update({
       where: { id },
+      data: { isDeleted: true },
+    });
+  }
+
+  async findStaffAccounts(search?: string) {
+    return await this.prisma.account.findMany({
+      where: {
+        role: Role.STAFF, // Chỉ lấy nhân viên
+        // isDeleted: false, // Loại bỏ tài khoản đã xóa
+        OR: search
+          ? [
+              { fullName: { contains: search } },
+              { email: { contains: search } },
+            ]
+          : undefined,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findAdminAccounts(search?: string) {
+    return await this.prisma.account.findMany({
+      where: {
+        role: Role.ADMIN, // Chỉ lấy admin
+        // isDeleted: false, // Loại bỏ tài khoản đã xóa
+        OR: search
+          ? [
+              { fullName: { contains: search } },
+              { email: { contains: search } },
+            ]
+          : undefined,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async updateProfile(id: string, data: IUpdateProfileInput) {
+    return await this.prisma.account.update({
+      where: { id },
+      data: {
+        fullName: data.fullName,
+        phone: data.phone,
+        avatar: data.avatar,
+      },
     });
   }
 }

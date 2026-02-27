@@ -16,6 +16,7 @@ import {
   ICreateAccountServiceInput, // Import cái này từ interface/account.ts
   IResetPasswordInput,
   IUpdateAccountInput,
+  IUpdateProfileInput,
   LoginRequest,
 } from '../interface/account.js';
 import { JwtService } from '@nestjs/jwt';
@@ -193,8 +194,28 @@ export class AccountService {
   }
 
   async deleteAccount(id: string) {
-    // Logic mới: Xóa cứng (Delete) thay vì Xóa mềm (Soft Delete)
-    // Nếu muốn Soft Delete thì cần thêm field isDeleted vào DB trước
+    const account = await this.accountRepository.findAccountById(id);
+    if (!account || account.isDeleted) {
+      throw new NotFoundException('Tài khoản không tồn tại hoặc đã bị xóa');
+    }
     return await this.accountRepository.deleteAccount(id);
+  }
+
+  async getStaffAccounts(search?: string) {
+    return await this.accountRepository.findStaffAccounts(search);
+  }
+
+  async updateProfile(id: string, input: IUpdateProfileInput) {
+    // Tùy chọn: Check xem user có tồn tại không
+    const account = await this.accountRepository.findAccountById(id); // Giả sử bạn có hàm findById
+    if (!account || account.isDeleted) {
+      throw new NotFoundException('Tài khoản không tồn tại hoặc đã bị xóa');
+    }
+
+    return await this.accountRepository.updateProfile(id, input);
+  }
+
+  async getAllAdmins(search?: string) {
+    return await this.accountRepository.findAdminAccounts(search);
   }
 }

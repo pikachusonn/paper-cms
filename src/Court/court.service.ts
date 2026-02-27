@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CourtRepository } from './court.repository.js';
 
 @Injectable()
@@ -27,5 +27,27 @@ export class CourtService {
 
   async createCourtOfficial(input: any) {
     return await this.courtRepository.createCourtOfficial(input);
+  }
+
+  async updateCourtOfficial(input: any) {
+    const { id, ...data } = input;
+
+    // Kiểm tra xem nhân sự có tồn tại không
+    const exists = await this.courtRepository.findOfficialById(id);
+    if (!exists || exists.isDeleted) {
+      throw new NotFoundException('Nhân sự không tồn tại hoặc đã bị xóa');
+    }
+
+    return await this.courtRepository.updateCourtOfficial(id, data);
+  }
+
+  async deleteCourtOfficial(id: string) {
+    const exists = await this.courtRepository.findOfficialById(id);
+    if (!exists || exists.isDeleted) {
+      throw new NotFoundException('Nhân sự không tồn tại hoặc đã bị xóa');
+    }
+
+    await this.courtRepository.deleteCourtOfficial(id);
+    return true; // Trả về true cho GraphQL (Boolean!)
   }
 }

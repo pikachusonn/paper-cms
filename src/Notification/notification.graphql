@@ -1,0 +1,38 @@
+scalar DateTime
+
+type Notification {
+  id: ID!
+  title: String!
+  content: String!
+  isRead: Boolean!
+  type: String
+  createdAt: DateTime!
+}
+
+type NotificationPagination {
+  data: [Notification!]!
+  total: Int!
+  unreadCount: Int! # Số lượng chưa đọc để hiển thị số đỏ trên quả chuông
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+input GetNotificationsFilterInput {
+  page: Int
+  limit: Int
+  isRead: Boolean # Truyền true/false để lọc tab "Chưa đọc", null để lấy "Tất cả"
+}
+
+extend type Query {
+  # Lấy danh sách thông báo của tài khoản đang đăng nhập
+  getMyNotifications(filter: GetNotificationsFilterInput!): NotificationPagination!
+}
+
+extend type Mutation {
+  # Đánh dấu 1 thông báo là đã đọc (Khi bấm vào icon con mắt)
+  markNotificationAsRead(id: ID!): Notification!
+  
+  # Đánh dấu TẤT CẢ là đã đọc
+  markAllNotificationsAsRead: Boolean!
+}

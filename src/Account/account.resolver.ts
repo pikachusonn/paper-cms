@@ -8,6 +8,7 @@ import {
   IResetPasswordInput,
   IUpdateAccountInput,
 } from '../interface/account.js';
+import type { IUpdateProfileInput } from '../interface/account.js';
 import { RolesGuard } from '../guard/roles.guard.js';
 import { Roles } from '../decorator/roles.decorator.js';
 import { CurrentUser } from '../decorator/current-user.decorator.js';
@@ -91,6 +92,31 @@ export class AccountResolver {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   async deleteAccount(@Args('id') id: string) {
-    return await this.accountService.deleteAccount(id);
+    await this.accountService.deleteAccount(id); // Gọi hàm xóa (update isDeleted = true)
+    return true;
+  }
+
+  @Query('getStaffAccounts')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN) // 👮 Chỉ Admin mới được xem danh sách nhân viên
+  async getStaffAccounts(@Args('search') search?: string) {
+    return await this.accountService.getStaffAccounts(search);
+  }
+
+  @Query('getAdminAccounts')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN) // 👮 Chỉ Admin mới được xem danh sách admin
+  async getAdminAccounts(@Args('search') search?: string) {
+    return await this.accountService.getAllAdmins(search);
+  }
+
+  @Mutation('updateProfile')
+  @UseGuards(JwtAuthGuard) // Bắt buộc phải đăng nhập
+  async updateProfile(
+    @Args('input') input: IUpdateProfileInput,
+    @CurrentUser() user: any, // Lấy user từ Token
+  ) {
+    // user.sub chính là ID của tài khoản đang đăng nhập
+    return await this.accountService.updateProfile(user.sub, input);
   }
 }

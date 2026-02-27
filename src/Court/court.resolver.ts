@@ -48,4 +48,18 @@ export class CourtResolver {
   async createCourtOfficial(@Args('input') input: any) {
     return await this.courtService.createCourtOfficial(input);
   }
+
+  @Mutation('updateCourtOfficial')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN) // 👮 Chỉ Admin được sửa
+  async updateCourtOfficial(@Args('input') input: any) {
+    return await this.courtService.updateCourtOfficial(input);
+  }
+
+  @Mutation('deleteCourtOfficial')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN) // 👮 Chỉ Admin được xóa
+  async deleteCourtOfficial(@Args('id') id: string) {
+    return await this.courtService.deleteCourtOfficial(id);
+  }
 }

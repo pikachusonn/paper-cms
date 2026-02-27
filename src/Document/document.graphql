@@ -1,42 +1,58 @@
 scalar DateTime
 
-# 1. TYPE VĂN BẢN (Cập nhật theo Schema Prisma MỚI)
+# 1. TYPE VĂN BẢN (Cập nhật theo Schema Prisma MỚI nhất với các loại phí chuẩn UI)
 type Document {
   id: ID!
-  docCode: String!     # Mã văn bản
-  docType: String      # Trích yếu
-  recipient: String    # Người nhận
-  address: String      # Địa chỉ nhận
-  
-  receivedDate: DateTime 
-  dueDate: DateTime      # Hạn tống đạt
-  
-  status: DocumentStatus! 
+  docCode: String! # Mã văn bản
+  docType: String # Trích yếu
+  recipient: String # Người nhận
+  address: String # Địa chỉ nhận
+  receivedDate: DateTime
+  dueDate: DateTime # Hạn tống đạt
+  status: DocumentStatus!
 
   # Kết quả xử lý
-  evidenceUrl: String    # Ảnh bằng chứng
+  evidenceUrl: String # Ảnh bằng chứng
   deliveryMethod: String
-  content: String        # Ghi chú / Nội dung
-  
-  # 👇 MỚI: Người chịu trách nhiệm (Object lấy từ bảng CourtOfficial)
-  responsibleOfficial: CourtOfficial 
-  
-  # 👇 MỚI: Người tạo/nhập liệu (Object lấy từ bảng Account)
+  content: String # Ghi chú / Nội dung
+  # Người chịu trách nhiệm (Object lấy từ bảng CourtOfficial)
+  responsibleOfficial: CourtOfficial
+
+  # Người tạo/nhập liệu (Object lấy từ bảng Account)
   creator: Account
-  
-  # Chi phí
-  distance: Float       
-  cost: Float            
-  fuelCost: Float        
-  otherCost: Float
-  totalCost: Float       
+
+  # 👇 MỚI: Chi phí cập nhật theo đúng giao diện
+  distance: Float
+  deliveryFee: Float
+  accommodationFee: Float
+  fuelFee: Float
+  otherFee: Float
+  totalFeeInternal: Float
+  totalFeeExternal: Float
 
   # Field tính toán (Frontend dùng để bôi màu)
-  isOverdue: Boolean 
+  isOverdue: Boolean
   isUrgent: Boolean
 
   # Quan hệ
   court: Court!
+}
+
+type BulkImportError {
+  rowIndex: Int!
+  message: String!
+}
+
+type BulkImportResult {
+  successCount: Int!
+  errors: [BulkImportError!]!
+}
+
+type CourtOfficial {
+  id: ID!
+  name: String!
+  title: String
+  phone: String
 }
 
 # 2. TYPE CHO DANH SÁCH PHÂN TRANG
@@ -51,7 +67,7 @@ type DocumentPagination {
   page: Int!
   limit: Int!
   totalPages: Int!
-  statHeader: CourtDocStats! 
+  statHeader: CourtDocStats!
 }
 
 # 3. INPUTS (Dữ liệu đầu vào)
@@ -59,8 +75,9 @@ type DocumentPagination {
 # Input lọc danh sách
 input GetDocsFilterInput {
   courtId: String!
-  year: Int!
-  status: DocumentStatus 
+  fromDate: String # Truyền định dạng YYYY-MM-DD
+  toDate: String # Truyền định dạng YYYY-MM-DD
+  status: DocumentStatus
   page: Int
   limit: Int
   search: String
@@ -68,6 +85,7 @@ input GetDocsFilterInput {
 
 # Input tạo mới (Khớp với Popup thiết kế)
 input CreateDocumentInput {
+  _rowIndex: Int
   courtId: String!
   docCode: String!
   docType: String!
@@ -75,32 +93,36 @@ input CreateDocumentInput {
   address: String
   receivedDate: DateTime
   dueDate: DateTime!
-  
-  # 👇 MỚI: Gửi ID của thư ký (chọn từ dropdown) thay vì nhập tên string
-  responsibleOfficialId: String 
-  
+
+  # ID của thư ký (chọn từ dropdown)
+  responsibleOfficialId: String
+  responsibleOfficialName: String
+
   deliveryMethod: String
   content: String
-  
-  # Các chi phí (nếu nhập luôn lúc tạo)
+
+  # 👇 MỚI: Các chi phí chuẩn (nếu nhập luôn lúc tạo)
   distance: Float
-  cost: Float
-  fuelCost: Float
-  otherCost: Float
-  totalCost: Float
+  deliveryFee: Float
+  accommodationFee: Float
+  fuelFee: Float
+  otherFee: Float
+  totalFeeInternal: Float
+  totalFeeExternal: Float
 }
 
 # Input cập nhật (Cho phép sửa cả thông tin sai + nhập kết quả)
 input UpdateDocumentInput {
   id: ID!
-  
+
   # Cho phép sửa thông tin cơ bản nếu nhập sai
   docCode: String
   docType: String
   recipient: String
   address: String
+  receivedDate: DateTime # Thêm trường này đề phòng user nhập sai ngày
   dueDate: DateTime
-  
+
   # Thay đổi người chịu trách nhiệm
   responsibleOfficialId: String
 
@@ -109,31 +131,42 @@ input UpdateDocumentInput {
   deliveryMethod: String
   content: String
   status: DocumentStatus
-  
-  # Nhập chi phí
+
+  # 👇 MỚI: Nhập chi phí chuẩn
   distance: Float
-  cost: Float
-  fuelCost: Float
-  otherCost: Float
-  totalCost: Float
+  deliveryFee: Float
+  accommodationFee: Float
+  fuelFee: Float
+  otherFee: Float
+  totalFeeInternal: Float
+  totalFeeExternal: Float
 }
 
 # 4. QUERY & MUTATION
 extend type Query {
   # Lấy danh sách văn bản chi tiết
   getDocumentsByCourt(filter: GetDocsFilterInput!): DocumentPagination!
-  
+
   # Lấy chi tiết 1 văn bản
   document(id: ID!): Document!
+
+  getOfficialsByCourt(courtId: ID!): [CourtOfficial!]!
 }
 
 extend type Mutation {
   # Tạo mới văn bản
   createDocument(input: CreateDocumentInput!): Document!
-  
+
   # Cập nhật văn bản
   updateDocument(input: UpdateDocumentInput!): Document!
-  
-  # Xóa văn bản
+
+  # Xóa văn bản (Soft Delete)
   deleteDocument(id: ID!): Boolean!
+
+  # 👇 MỚI: Nút bấm riêng cho Admin xác nhận khóa văn bản
+  confirmDocument(id: ID!): Document!
+
+  createMultipleDocuments(inputs: [CreateDocumentInput!]!): Int!
+
+  createBulkDocuments(inputs: [CreateDocumentInput!]!): BulkImportResult!
 }

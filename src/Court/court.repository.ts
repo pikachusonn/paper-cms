@@ -36,6 +36,8 @@ export class CourtRepository {
         name: input.name,
         address: input.address,
         courtNumber: input.courtNumber ?? 0,
+        phone: input.phone,
+        email: input.email,
       },
     });
   }
@@ -139,5 +141,31 @@ export class CourtRepository {
       totalSecretary,
       courts: formattedCourts,
     };
+  }
+
+  async findOfficialById(id: string) {
+    return await this.prisma.courtOfficial.findUnique({
+      where: { id },
+    });
+  }
+
+  // 2. Cập nhật nhân sự
+  async updateCourtOfficial(id: string, data: any) {
+    return await this.prisma.courtOfficial.update({
+      where: { id },
+      data: {
+        name: data.name,
+        title: data.title,
+        phone: data.phone,
+      },
+    });
+  }
+
+  // 3. Xóa nhân sự (Soft Delete)
+  async deleteCourtOfficial(id: string) {
+    return await this.prisma.courtOfficial.update({
+      where: { id },
+      data: { isDeleted: true }, // 👈 Chỉ ẩn đi chứ không xóa mất
+    });
   }
 }

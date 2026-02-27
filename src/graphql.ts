@@ -37,6 +37,12 @@ export interface ChangePasswordInput {
     newPassword: string;
 }
 
+export interface UpdateProfileInput {
+    fullName?: Nullable<string>;
+    phone?: Nullable<string>;
+    avatar?: Nullable<string>;
+}
+
 export interface ResetPasswordInput {
     email: string;
     otp: string;
@@ -62,6 +68,15 @@ export interface CreateCourtInput {
     name: string;
     address: string;
     courtNumber?: Nullable<number>;
+    phone?: Nullable<string>;
+    email?: Nullable<string>;
+}
+
+export interface UpdateOfficialInput {
+    id: string;
+    name?: Nullable<string>;
+    title?: Nullable<string>;
+    phone?: Nullable<string>;
 }
 
 export interface CreateOfficialInput {
@@ -73,7 +88,8 @@ export interface CreateOfficialInput {
 
 export interface GetDocsFilterInput {
     courtId: string;
-    year: number;
+    fromDate?: Nullable<string>;
+    toDate?: Nullable<string>;
     status?: Nullable<DocumentStatus>;
     page?: Nullable<number>;
     limit?: Nullable<number>;
@@ -81,6 +97,7 @@ export interface GetDocsFilterInput {
 }
 
 export interface CreateDocumentInput {
+    _rowIndex?: Nullable<number>;
     courtId: string;
     docCode: string;
     docType: string;
@@ -89,13 +106,16 @@ export interface CreateDocumentInput {
     receivedDate?: Nullable<DateTime>;
     dueDate: DateTime;
     responsibleOfficialId?: Nullable<string>;
+    responsibleOfficialName?: Nullable<string>;
     deliveryMethod?: Nullable<string>;
     content?: Nullable<string>;
     distance?: Nullable<number>;
-    cost?: Nullable<number>;
-    fuelCost?: Nullable<number>;
-    otherCost?: Nullable<number>;
-    totalCost?: Nullable<number>;
+    deliveryFee?: Nullable<number>;
+    accommodationFee?: Nullable<number>;
+    fuelFee?: Nullable<number>;
+    otherFee?: Nullable<number>;
+    totalFeeInternal?: Nullable<number>;
+    totalFeeExternal?: Nullable<number>;
 }
 
 export interface UpdateDocumentInput {
@@ -104,6 +124,7 @@ export interface UpdateDocumentInput {
     docType?: Nullable<string>;
     recipient?: Nullable<string>;
     address?: Nullable<string>;
+    receivedDate?: Nullable<DateTime>;
     dueDate?: Nullable<DateTime>;
     responsibleOfficialId?: Nullable<string>;
     evidenceUrl?: Nullable<string>;
@@ -111,10 +132,18 @@ export interface UpdateDocumentInput {
     content?: Nullable<string>;
     status?: Nullable<DocumentStatus>;
     distance?: Nullable<number>;
-    cost?: Nullable<number>;
-    fuelCost?: Nullable<number>;
-    otherCost?: Nullable<number>;
-    totalCost?: Nullable<number>;
+    deliveryFee?: Nullable<number>;
+    accommodationFee?: Nullable<number>;
+    fuelFee?: Nullable<number>;
+    otherFee?: Nullable<number>;
+    totalFeeInternal?: Nullable<number>;
+    totalFeeExternal?: Nullable<number>;
+}
+
+export interface GetNotificationsFilterInput {
+    page?: Nullable<number>;
+    limit?: Nullable<number>;
+    isRead?: Nullable<boolean>;
 }
 
 export interface Account {
@@ -124,6 +153,9 @@ export interface Account {
     phone?: Nullable<string>;
     avatar?: Nullable<string>;
     role: Role;
+    isDeleted: boolean;
+    createdAt: DateTime;
+    updatedAt: DateTime;
 }
 
 export interface LoginResponse {
@@ -145,6 +177,8 @@ export interface IQuery {
     accounts(): Account[] | Promise<Account[]>;
     account(id: string): Account | Promise<Account>;
     getAllAccounts(filter?: Nullable<AccountFilterInput>): AccountPagination | Promise<AccountPagination>;
+    getStaffAccounts(search?: Nullable<string>): Account[] | Promise<Account[]>;
+    getAdminAccounts(search?: Nullable<string>): Account[] | Promise<Account[]>;
     auth(): AuthQuery | Promise<AuthQuery>;
     dashboardStats(year: number, searchCourt?: Nullable<string>): DashboardSummary | Promise<DashboardSummary>;
     courts(): Court[] | Promise<Court[]>;
@@ -153,6 +187,8 @@ export interface IQuery {
     courtStaff(id: string): CourtStaff | Promise<CourtStaff>;
     getDocumentsByCourt(filter: GetDocsFilterInput): DocumentPagination | Promise<DocumentPagination>;
     document(id: string): Document | Promise<Document>;
+    getOfficialsByCourt(courtId: string): CourtOfficial[] | Promise<CourtOfficial[]>;
+    getMyNotifications(filter: GetNotificationsFilterInput): NotificationPagination | Promise<NotificationPagination>;
 }
 
 export interface IMutation {
@@ -165,11 +201,19 @@ export interface IMutation {
     resetPassword(input: ResetPasswordInput): boolean | Promise<boolean>;
     updateAccount(input: UpdateAccountInput): Account | Promise<Account>;
     deleteAccount(id: string): boolean | Promise<boolean>;
+    updateProfile(input: UpdateProfileInput): Account | Promise<Account>;
     createCourt(input: CreateCourtInput): Court | Promise<Court>;
     createCourtOfficial(input: CreateOfficialInput): CourtOfficial | Promise<CourtOfficial>;
+    updateCourtOfficial(input: UpdateOfficialInput): CourtOfficial | Promise<CourtOfficial>;
+    deleteCourtOfficial(id: string): boolean | Promise<boolean>;
     createDocument(input: CreateDocumentInput): Document | Promise<Document>;
     updateDocument(input: UpdateDocumentInput): Document | Promise<Document>;
     deleteDocument(id: string): boolean | Promise<boolean>;
+    confirmDocument(id: string): Document | Promise<Document>;
+    createMultipleDocuments(inputs: CreateDocumentInput[]): number | Promise<number>;
+    createBulkDocuments(inputs: CreateDocumentInput[]): BulkImportResult | Promise<BulkImportResult>;
+    markNotificationAsRead(id: string): Notification | Promise<Notification>;
+    markAllNotificationsAsRead(): boolean | Promise<boolean>;
 }
 
 export interface AuthQuery {
@@ -182,6 +226,7 @@ export interface CourtOfficial {
     name: string;
     title?: Nullable<string>;
     phone?: Nullable<string>;
+    isDeleted: boolean;
 }
 
 export interface Court {
@@ -238,13 +283,25 @@ export interface Document {
     responsibleOfficial?: Nullable<CourtOfficial>;
     creator?: Nullable<Account>;
     distance?: Nullable<number>;
-    cost?: Nullable<number>;
-    fuelCost?: Nullable<number>;
-    otherCost?: Nullable<number>;
-    totalCost?: Nullable<number>;
+    deliveryFee?: Nullable<number>;
+    accommodationFee?: Nullable<number>;
+    fuelFee?: Nullable<number>;
+    otherFee?: Nullable<number>;
+    totalFeeInternal?: Nullable<number>;
+    totalFeeExternal?: Nullable<number>;
     isOverdue?: Nullable<boolean>;
     isUrgent?: Nullable<boolean>;
     court: Court;
+}
+
+export interface BulkImportError {
+    rowIndex: number;
+    message: string;
+}
+
+export interface BulkImportResult {
+    successCount: number;
+    errors: BulkImportError[];
 }
 
 export interface CourtDocStats {
@@ -259,6 +316,24 @@ export interface DocumentPagination {
     limit: number;
     totalPages: number;
     statHeader: CourtDocStats;
+}
+
+export interface Notification {
+    id: string;
+    title: string;
+    content: string;
+    isRead: boolean;
+    type?: Nullable<string>;
+    createdAt: DateTime;
+}
+
+export interface NotificationPagination {
+    data: Notification[];
+    total: number;
+    unreadCount: number;
+    page: number;
+    limit: number;
+    totalPages: number;
 }
 
 export type DateTime = any;

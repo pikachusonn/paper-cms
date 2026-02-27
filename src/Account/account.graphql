@@ -12,6 +12,9 @@ type Account {
   phone: String
   avatar: String
   role: Role!
+  isDeleted: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type LoginResponse {
@@ -49,6 +52,12 @@ input ChangePasswordInput {
   newPassword: String!
 }
 
+input UpdateProfileInput {
+  fullName: String
+  phone: String
+  avatar: String
+}
+
 input ResetPasswordInput {
   email: String!
   otp: String!
@@ -60,7 +69,6 @@ input AccountFilterInput {
   limit: Int
   search: String # Tìm theo Tên hoặc Email
   role: Role
-  # ĐÃ XÓA courtId (Vì Account k còn thuộc Court)
 }
 
 input UpdateAccountInput {
@@ -88,6 +96,11 @@ extend type Query {
 
   # Lấy danh sách phân trang (Màn hình Quản lý nhân sự)
   getAllAccounts(filter: AccountFilterInput): AccountPagination!
+
+  #Lất danh sách nhân sự (cho dropdown khi tạo vụ án, chỉ lấy role STAFF)
+  getStaffAccounts(search: String): [Account!]!
+
+  getAdminAccounts(search: String): [Account!]!
 }
 
 # --- MUTATION ---
@@ -121,4 +134,6 @@ extend type Mutation {
 
   # 8. Xóa tài khoản
   deleteAccount(id: ID!): Boolean!
+
+  updateProfile(input: UpdateProfileInput!): Account!
 }

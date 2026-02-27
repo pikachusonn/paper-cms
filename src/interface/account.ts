@@ -104,3 +104,9 @@ export class IUpdateAccountInput {
   @IsString()
   avatar?: string;
 }
+
+export interface IUpdateProfileInput {
+  fullName?: string;
+  phone?: string;
+  avatar?: string;
+}

@@ -35,6 +35,7 @@ model Account {
   
   resetPasswordExpires DateTime?
   resetPasswordToken   String?
+  isDeleted Boolean @default(false)
 
   // Relation: Nhân viên này ĐÃ TẠO những văn bản nào (Tracking)
   createdDocuments     Document[] @relation("CreatedBy")
@@ -122,18 +123,23 @@ model Document {
   responsibleOfficial   CourtOfficial? @relation(fields: [responsibleOfficialId], references: [id])
   
   // -- Kết quả xử lý --
-  evidenceUrl       String?        // Ảnh bằng chứng
+  evidenceUrl       String?        @db.LongText // Ảnh bằng chứng
   status            DocumentStatus @default(WAITING)
   
   // -- Chi phí --
-  distance          Float          @default(0)
-  cost              Float          @default(0)
-  fuelCost          Float          @default(0)
-  otherCost         Float          @default(0)
-  totalCost         Float          @default(0)
+  distance            Float          @default(0) // Số km đã đi (km)
+  deliveryFee         Float          @default(0) // Chi phí tống đạt đối với từng giấy tờ (vnđ)
+  accommodationFee    Float          @default(0) // Hỗ trợ kiểm trọ (vnđ)
+  fuelFee             Float          @default(0) // Hỗ trợ xăng xe (vnđ)
+  otherFee            Float          @default(0) // Chi phí khác (vnđ)
+  totalFeeInternal    Float          @default(0) // Tổng chi phí (Nội tỉnh)
+  totalFeeExternal    Float          @default(0) // Tổng chi phí (Ngoại tỉnh)
 
+  isDeleted             Boolean        @default(false)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+
+  @@unique([courtId, docCode])
 
   // -- RELATIONS --
 
