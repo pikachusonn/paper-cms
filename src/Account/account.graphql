@@ -1,43 +1,137 @@
 scalar DateTime
 
 enum Role {
-    ADMIN
-    STAFF
-}
-
-input LoginRequest {
-    email: String!
-    password: String!
+  ADMIN
+  STAFF
 }
 
 type Account {
-    id: ID!
-    email: String!
-    password: String!
-    createdAt: DateTime
-    avatar: String
-    role: Role!
+  id: ID!
+  email: String!
+  fullName: String
+  phone: String
+  avatar: String
+  role: Role!
+  isDeleted: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type LoginResponse {
-    accessToken: String!
-    refreshToken: String!
-    account: Account!
+  accessToken: String!
+  refreshToken: String!
+  account: Account!
 }
 
+type AccountPagination {
+  data: [Account!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+# --- INPUTS ---
+
+input LoginRequest {
+  email: String!
+  password: String!
+}
+
+input CreateAccountInput {
+  email: String!
+  fullName: String! # Map vào db
+  phone: String
+  role: Role
+  # ĐÃ XÓA courtId
+}
+
+input ChangePasswordInput {
+  userId: ID!
+  oldPassword: String!
+  newPassword: String!
+}
+
+input UpdateProfileInput {
+  fullName: String
+  phone: String
+  avatar: String
+}
+
+input ResetPasswordInput {
+  email: String!
+  otp: String!
+  newPassword: String!
+}
+
+input AccountFilterInput {
+  page: Int
+  limit: Int
+  search: String # Tìm theo Tên hoặc Email
+  role: Role
+}
+
+input UpdateAccountInput {
+  id: ID! # ID tài khoản cần sửa
+  name: String # Update fullName
+  phone: String
+  avatar: String
+}
+
+# --- QUERY ---
+
 type Query {
+  # Root Query (Nên để rỗng hoặc _empty để các file khác extend)
   _empty: String
 }
 
 extend type Query {
-    accounts: [Account!]!
-    account(id: ID!): Account!
+  # Lấy danh sách tất cả (cho dropdown nếu cần)
+  accounts: [Account!]!
+
+  # Lấy chi tiết 1 user
+  account(id: ID!): Account!
+
+  # Lấy danh sách phân trang (Màn hình Quản lý nhân sự)
+  getAllAccounts(filter: AccountFilterInput): AccountPagination!
+
+  #Lất danh sách nhân sự (cho dropdown khi tạo vụ án, chỉ lấy role STAFF)
+  getStaffAccounts(search: String): [Account!]!
+
+  getAdminAccounts(search: String): [Account!]!
 }
 
+# --- MUTATION ---
 
 type Mutation {
-    login(loginRequest: LoginRequest!): LoginResponse!
+  # Root Mutation
+  _empty: String
 }
 
+extend type Mutation {
+  # 1. Login
+  login(loginRequest: LoginRequest!): LoginResponse!
 
+  # 2. Tạo tài khoản
+  createAccount(input: CreateAccountInput!): Account!
 
+  # 3. Đăng xuất
+  logout(userId: ID!): Boolean!
+
+  # 4. Đổi mật khẩu
+  changePassword(input: ChangePasswordInput!): Boolean!
+
+  # 5. Yêu cầu quên mật khẩu
+  forgotPassword(email: String!): Boolean!
+
+  # 6. Đặt lại mật khẩu
+  resetPassword(input: ResetPasswordInput!): Boolean!
+
+  # 7. Cập nhật thông tin
+  updateAccount(input: UpdateAccountInput!): Account!
+
+  # 8. Xóa tài khoản
+  deleteAccount(id: ID!): Boolean!
+
+  updateProfile(input: UpdateProfileInput!): Account!
+}

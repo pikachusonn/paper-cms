@@ -1,84 +1,172 @@
 generator client {
-    provider = "prisma-client"
-    output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "mysql"
+  provider = "mysql"
 }
 
+// --- 1. ENUMS ---
 enum Role {
-    ADMIN
-    STAFF
+  ADMIN
+  STAFF // Nhân viên của Văn phòng Luật sư (Người nhập liệu)
 }
 
 enum DocumentStatus {
-    PENDING
-    PROCESSED
-    FINISHED
+  WAITING   // Đợi tống đạt
+  COMPLETED // Đã tống đạt
+  CONFIRMED // Đã xác nhận
 }
 
+// --- 2. ACCOUNT (Người dùng thật - Có Login) ---
 model Account {
-    id String @id @default(uuid())
-    email String @unique
-    password String
-    createdAt DateTime @default(now())
-    avatar String?
-    role Role @default(STAFF)
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  password             String
+  role                 Role      @default(STAFF)
+  
+  // Thông tin cá nhân (Gộp vào đây luôn vì đã tách khỏi CourtStaff)
+  fullName             String?   // Tên nhân viên nhập liệu (VD: Nguyễn Văn A)
+  phone                String?
+  avatar               String?
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  resetPasswordExpires DateTime?
+  resetPasswordToken   String?
+  isDeleted Boolean @default(false)
+
+  // Relation: Nhân viên này ĐÃ TẠO những văn bản nào (Tracking)
+  createdDocuments     Document[] @relation("CreatedBy")
+  
+  // Relation: Thông báo của tôi
+  notifications        Notification[]
 }
 
+// --- 3. TÒA ÁN ---
 model Court {
-    id String @id @default(uuid())
-    name String
-    address String
-    phone String?
-    email String?
-    staff CourtStaff[]
-    isDeleted Boolean @default(false)
-    courtNumber Int
-    documentList DocumentList[]
-    document Document[]
+  id           String    @id @default(uuid())
+  name         String    // Tòa án nhân dân huyện ABC...
+  address      String
+  phone        String?
+  email        String?
+  courtNumber  Int       // Mã số định danh
+  
+  isDeleted    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relation 1-N: Tòa này có những nhân sự nào (Danh bạ Thư ký/Thẩm phán)
+  officials    CourtOfficial[] 
+  
+  documentList DocumentList[]
+  documents    Document[]
 }
 
-model CourtStaff {
-    id String @id @default(uuid())
-    courtId String
-    court Court @relation(fields: [courtId], references: [id])
-    name String
-    phone String?
-    avatar String?
-    socialId String?
-    email String?
-    isDeleted Boolean @default(false)
-    document Document[]
-    operatingArea String
+// --- 4. NHÂN SỰ TÒA ÁN (Dữ liệu danh bạ - KHÔNG Login) ---
+// MỚI: Đổi tên CourtStaff -> CourtOfficial cho đỡ nhầm
+model CourtOfficial {
+  id            String   @id @default(uuid())
+  name          String   // Tên hiển thị (VD: Thư ký Hồng Vân)
+  title         String?  // Chức danh (Thư ký, Thẩm phán...)
+  phone         String?  // SĐT liên hệ công việc
+  
+  isDeleted     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relation N-1: Thuộc về 1 Tòa án
+  courtId       String
+  court         Court    @relation(fields: [courtId], references: [id])
+
+  // Relation 1-N: Được gán tên vào những văn bản nào (Chịu trách nhiệm)
+  responsibleDocs Document[]
 }
 
+// --- 5. BẢNG KÊ ---
 model DocumentList {
-    id String @id @default(uuid())
-    sendByCourtId String
-    sentByCourt Court @relation(fields: [sendByCourtId], references: [id])
-    sentAt String
-    fileUrl String
+  id            String   @id @default(uuid())
+  code          String?  
+  fileUrl       String   
+  sentAt        DateTime @default(now()) 
+  
+  // Relation N-1: Bảng kê này của tòa nào gửi
+  sendByCourtId String
+  sentByCourt   Court    @relation(fields: [sendByCourtId], references: [id])
+
+  // Relation 1-N
+  documents     Document[]
 }
 
+// --- 6. VĂN BẢN TỐNG ĐẠT ---
 model Document {
-    id String @id @default(uuid())
-    receivedDate String
-    documentCode String
-    content String
-    processProof String?
-    processAddress String
-    processDeadline String
-    processStatus DocumentStatus @default(PENDING)
-    pricePerDocument Int
-    travelDistance Int?
-    gasFee Int?
-    innerTotalPrice Int?
-    outerTotalPrice Int?
-    courtStaffId String?
-    courtStaff CourtStaff? @relation(fields: [courtStaffId], references: [id])
-    note String?
-    courtId String
-    court Court @relation(fields: [courtId], references: [id])
+  id                String         @id @default(uuid())
+  
+  // -- Thông tin chung --
+  docCode           String         // Mã văn bản (Số 164/TB-TA...)
+  docType           String         // Trích yếu
+  receivedDate      DateTime       @default(now())
+  
+  // -- Thông tin người nhận --
+  recipient         String         // Người được tống đạt
+  address           String?        // Địa chỉ
+  dueDate           DateTime       // Hạn tống đạt
+  
+  // -- Chi tiết thực hiện --
+  deliveryMethod    String?        // Hình thức
+  content           String?        @db.Text
+  
+  // -- QUAN TRỌNG: Người chịu trách nhiệm (Chọn từ danh bạ CourtOfficial) --
+  // Thay thế trường 'responsiblePerson' String cũ
+  responsibleOfficialId String?
+  responsibleOfficial   CourtOfficial? @relation(fields: [responsibleOfficialId], references: [id])
+  
+  // -- Kết quả xử lý --
+  evidenceUrl       String?        @db.LongText // Ảnh bằng chứng
+  status            DocumentStatus @default(WAITING)
+  
+  // -- Chi phí --
+  distance            Float          @default(0) // Số km đã đi (km)
+  deliveryFee         Float          @default(0) // Chi phí tống đạt đối với từng giấy tờ (vnđ)
+  accommodationFee    Float          @default(0) // Hỗ trợ kiểm trọ (vnđ)
+  fuelFee             Float          @default(0) // Hỗ trợ xăng xe (vnđ)
+  otherFee            Float          @default(0) // Chi phí khác (vnđ)
+  totalFeeInternal    Float          @default(0) // Tổng chi phí (Nội tỉnh)
+  totalFeeExternal    Float          @default(0) // Tổng chi phí (Ngoại tỉnh)
+
+  isDeleted             Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([courtId, docCode])
+
+  // -- RELATIONS --
+
+  // 1. Của tòa nào
+  courtId           String
+  court             Court          @relation(fields: [courtId], references: [id])
+
+  // 2. Thuộc bảng kê nào
+  documentListId    String?
+  documentList      DocumentList?  @relation(fields: [documentListId], references: [id])
+
+  // 3. Ai là người tạo/nhập liệu văn bản này? (User hệ thống - Account)
+  creatorId         String?
+  creator           Account?       @relation("CreatedBy", fields: [creatorId], references: [id])
+}
+
+// --- 7. THÔNG BÁO ---
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text
+  isRead    Boolean  @default(false)
+  type      String   
+  
+  createdAt DateTime @default(now())
+  
+  // Thông báo gửi cho account nào
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
 }

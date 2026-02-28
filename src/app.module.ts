@@ -9,12 +9,19 @@ import { join } from 'path';
 import { AccountModule } from './Account/account.module.js';
 import { CourtModule } from './Court/court.module.js';
 import { DocumentModule } from './Document/document.module.js';
+import { ScheduleModule } from '@nestjs/schedule';
+import { NotificationCronService } from './Cron/notification-cron.service.js';
+import { Prisma } from './generated/prisma/browser.js';
+import { PrismaService } from './service/prisma.service.js';
+import { NotificationModule } from './Notification/notification.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
+    NotificationModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       graphiql: true,
@@ -29,6 +36,6 @@ import { DocumentModule } from './Document/document.module.js';
     DocumentModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, NotificationCronService, PrismaService],
 })
 export class AppModule {}

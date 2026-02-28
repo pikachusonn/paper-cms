@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js" // Thường là prisma-client-js
+  output   = "../src/generated/prisma" // Giữ nguyên cấu hình output của ông
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+// Cập nhật status theo UI: Chờ xử lý, Đã xong, Thất bại
+enum DocumentStatus {
+  PENDING // Chờ tống đạt
+  PROCESSED // Đã thực hiện (Đang chờ duyệt hoặc xong)
+  FINISHED // Hoàn thành
+  FAILED // Thất bại
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  avatar    String?
+  role      Role     @default(STAFF)
+
+  // Relation: Link sang nhân viên
+  courtStaff   CourtStaff? @relation(fields: [courtStaffId], references: [id])
+  courtStaffId String?     @unique // 1 Account chỉ link 1 Staff
+
+  // Relation: Link sang thông báo
+  notifications Notification[]
+}
+
+model Court {
+  id          String  @id @default(uuid())
+  name        String
+  address     String
+  phone       String?
+  email       String?
+  courtNumber Int
+  isDeleted   Boolean @default(false)
+
+  // Relations
+  staff        CourtStaff[]
+  documentList DocumentList[]
+  document     Document[]
+}
+
+model CourtStaff {
+  id            String  @id @default(uuid())
+  name          String
+  phone         String?
+  avatar        String?
+  socialId      String?
+  email         String?
+  operatingArea String?
+  isDeleted     Boolean @default(false)
+
+  // Relation: Link ngược về Account
+  account Account?
+
+  // Relation: Thuộc tòa nào
+  courtId String
+  court   Court  @relation(fields: [courtId], references: [id])
+
+  // Relation: Làm các văn bản nào
+  document Document[]
+}
+
+model DocumentList {
+  id            String @id @default(uuid())
+  sendByCourtId String
+  sentByCourt   Court  @relation(fields: [sendByCourtId], references: [id])
+  sentAt        String // Có thể cân nhắc đổi sang DateTime nếu cần sort
+  fileUrl       String
+}
+
+model Document {
+  id           String @id @default(uuid())
+  documentCode String
+  content      String @db.Text // Cho phép lưu nội dung dài
+
+  // -- Cụm thông tin ngày tháng (Khuyên đổi sang DateTime để query Dashboard) --
+  receivedDate    DateTime  @default(now())
+  processDeadline DateTime?
+
+  // -- Cụm thông tin xử lý --
+  processAddress String?
+  processProof   String? // Ảnh bằng chứng
+  processStatus  DocumentStatus @default(PENDING)
+  note           String?        @db.Text
+
+  // -- Cụm chi phí (Khớp UI Edit) --
+  pricePerDocument Float @default(0) // Giá gốc
+  travelDistance   Float @default(0) // Số Km
+  gasFee           Float @default(0) // Phí xăng
+  hazardousRoadFee Float @default(0) // Phí đường hiểm trở (Thêm mới)
+  otherFee         Float @default(0) // Chi phí khác (Thêm mới)
+
+  innerTotalPrice Float @default(0) // Tổng nội tỉnh
+  outerTotalPrice Float @default(0) // Tổng ngoại tỉnh
+
+  // -- Relations --
+  courtStaffId String?
+  courtStaff   CourtStaff? @relation(fields: [courtStaffId], references: [id])
+
+  courtId String
+  court   Court  @relation(fields: [courtId], references: [id])
+}
+
+// Thêm bảng mới cho màn hình Thông báo
+model Notification {
+  id      String  @id @default(uuid())
+  title   String
+  content String  @db.Text
+  isRead  Boolean @default(false)
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id])
+
+  createdAt DateTime @default(now())
+}

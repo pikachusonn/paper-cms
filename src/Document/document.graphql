@@ -1,73 +1,187 @@
-enum DocumentStatus {
-  PENDING
-  PROCESSED
-  FINISHED
-}
+scalar DateTime
 
-enum SortByDeadline {
-  desc
-  asc
-}
-
+# 1. TYPE VĂN BẢN (Cập nhật theo Schema Prisma MỚI nhất với các loại phí chuẩn UI)
 type Document {
   id: ID!
-  receivedDate: String!
-  documentCode: String!
-  content: String!
-  processProof: String
-  processAddress: String!
-  processDeadline: String!
-  processStatus: DocumentStatus!
-  pricePerDocument: Int!
-  travelDistance: Int
-  gasFee: Int
-  innerTotalPrice: Int
-  outerTotalPrice: Int
-  courtStaff: CourtStaff
-  note: String
+  docCode: String! # Mã văn bản
+  docType: String # Trích yếu
+  recipient: String # Người nhận
+  address: String # Địa chỉ nhận
+  receivedDate: DateTime
+  dueDate: DateTime # Hạn tống đạt
+  status: DocumentStatus!
+
+  # Kết quả xử lý
+  evidenceUrl: String # Ảnh bằng chứng
+  deliveryMethod: String
+  content: String # Ghi chú / Nội dung
+  # Người chịu trách nhiệm (Object lấy từ bảng CourtOfficial)
+  responsibleOfficial: CourtOfficial
+
+  # Người tạo/nhập liệu (Object lấy từ bảng Account)
+  creator: Account
+
+  # 👇 MỚI: Chi phí cập nhật theo đúng giao diện
+  distance: Float
+  deliveryFee: Float
+  accommodationFee: Float
+  fuelFee: Float
+  otherFee: Float
+  totalFeeInternal: Float
+  totalFeeExternal: Float
+
+  # Field tính toán (Frontend dùng để bôi màu)
+  isOverdue: Boolean
+  isUrgent: Boolean
+
+  # Quan hệ
   court: Court!
-
-  isLate: Boolean!
 }
 
-type DocumentList {
+type BulkImportError {
+  rowIndex: Int!
+  message: String!
+}
+
+type BulkImportResult {
+  successCount: Int!
+  errors: [BulkImportError!]!
+}
+
+type CourtOfficial {
   id: ID!
-  sentByCourt: Court!
-  sentAt: String!
-  fileUrl: String!
+  name: String!
+  title: String
+  phone: String
 }
 
-input DocumentFilter {
-  courtId: ID!
-  deadlineStart: String
-  deadlineEnd: String
-  documentStatus: DocumentStatus
-  sort: SortByDeadline
+# 2. TYPE CHO DANH SÁCH PHÂN TRANG
+type CourtDocStats {
+  waiting: Int!
+  overdue: Int!
 }
 
-input DocumentPayload {
-  receiveDate: String!
-  documentCode: String!
-  content: String!
-  processProof: String
-  processAddress: String!
-  processDeadline: String!
-  pricePerDocument: Int!
-  travelDistance: Int
-  courtStaff: String
-  note: String
-  court: String!
+type DocumentPagination {
+  data: [Document!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+  statHeader: CourtDocStats!
 }
 
+# 3. INPUTS (Dữ liệu đầu vào)
 
+# Input lọc danh sách
+input GetDocsFilterInput {
+  courtId: String!
+  fromDate: String # Truyền định dạng YYYY-MM-DD
+  toDate: String # Truyền định dạng YYYY-MM-DD
+  status: DocumentStatus
+  page: Int
+  limit: Int
+  search: String
+}
+
+# Input tạo mới (Khớp với Popup thiết kế)
+input CreateDocumentInput {
+  _rowIndex: Int
+  courtId: String!
+  docCode: String!
+  docType: String!
+  recipient: String!
+  address: String
+  receivedDate: DateTime
+  dueDate: DateTime!
+
+  # ID của thư ký (chọn từ dropdown)
+  responsibleOfficialId: String
+  responsibleOfficialName: String
+
+  deliveryMethod: String
+  content: String
+
+  # 👇 MỚI: Các chi phí chuẩn (nếu nhập luôn lúc tạo)
+  distance: Float
+  deliveryFee: Float
+  accommodationFee: Float
+  fuelFee: Float
+  otherFee: Float
+  totalFeeInternal: Float
+  totalFeeExternal: Float
+}
+
+# Input cập nhật (Cho phép sửa cả thông tin sai + nhập kết quả)
+input UpdateDocumentInput {
+  id: ID!
+
+  # Cho phép sửa thông tin cơ bản nếu nhập sai
+  docCode: String
+  docType: String
+  recipient: String
+  address: String
+  receivedDate: DateTime # Thêm trường này đề phòng user nhập sai ngày
+  dueDate: DateTime
+
+  # Thay đổi người chịu trách nhiệm
+  responsibleOfficialId: String
+
+  # Nhập kết quả
+  evidenceUrl: String
+  deliveryMethod: String
+  content: String
+  status: DocumentStatus
+
+  # 👇 MỚI: Nhập chi phí chuẩn
+  distance: Float
+  deliveryFee: Float
+  accommodationFee: Float
+  fuelFee: Float
+  otherFee: Float
+  totalFeeInternal: Float
+  totalFeeExternal: Float
+}
+
+type OfficialDropdown {
+  id: ID!
+  name: String!
+  title: String
+}
+
+# 4. QUERY & MUTATION
 extend type Query {
-  documents: [Document!]!
-  documentsByCourtId(documentFilter: DocumentFilter!): [Document!]!
+  # Lấy danh sách văn bản chi tiết
+  getDocumentsByCourt(filter: GetDocsFilterInput!): DocumentPagination!
+
+  # Lấy chi tiết 1 văn bản
   document(id: ID!): Document!
-  documentLists: [DocumentList!]!
+
+  getOfficialsByCourt(courtId: ID!): [CourtOfficial!]!
+
+  # API Public: Lấy danh sách cán bộ dựa vào token 30 phút
+  publicGetOfficials(token: String!): [OfficialDropdown!]!
 }
 
-type Mutation {
-  createMutation(createMutationRequest: DocumentPayload!): Document!
-  createFromImport(createFromImportRequest: [DocumentPayload!]!): [Document!]!
+extend type Mutation {
+  # Tạo mới văn bản
+  createDocument(input: CreateDocumentInput!): Document!
+
+  # Cập nhật văn bản
+  updateDocument(input: UpdateDocumentInput!): Document!
+
+  # Xóa văn bản (Soft Delete)
+  deleteDocument(id: ID!): Boolean!
+
+  # 👇 MỚI: Nút bấm riêng cho Admin xác nhận khóa văn bản
+  confirmDocument(id: ID!): Document!
+
+  createMultipleDocuments(inputs: [CreateDocumentInput!]!): Int!
+
+  createBulkDocuments(inputs: [CreateDocumentInput!]!): BulkImportResult!
+
+  # 1. API cho Admin: Tạo link public có hiệu lực 30p
+  generatePublicImportLink(courtId: ID!): String!
+
+  # 2. API Public: Dùng token 30p để import (không cần đăng nhập)
+  publicCreateBulkDocuments(token: String!, inputs: [CreateDocumentInput!]!): BulkImportResult!
 }

@@ -6,5 +6,6 @@ import { PrismaService } from '../service/prisma.service.js';
 
 @Module({
   providers: [CourtResolver, CourtService, CourtRepository, PrismaService],
+  exports: [CourtService],
 })
 export class CourtModule {}

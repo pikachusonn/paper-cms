@@ -1,28 +1,97 @@
-
-
 scalar DateTime
 
+# 1. ENUM TRẠNG THÁI
+enum DocumentStatus {
+  WAITING # Đợi tống đạt
+  COMPLETED # Đã tống đạt (Có bằng chứng)
+  CONFIRMED # Đã xác nhận
+}
+
+# 2. TYPE NHÂN SỰ TÒA ÁN (Thay thế CourtStaff cũ)
+# Đây là Thư ký/Thẩm phán (Dữ liệu danh bạ, không login)
+type CourtOfficial {
+  id: ID!
+  name: String! # VD: Thư ký Hồng Vân
+  title: String # VD: Thư ký, Thẩm phán
+  phone: String
+  isDeleted: Boolean! # Đánh dấu đã xóa (soft delete)
+}
+
+# 3. TYPE TÒA ÁN
 type Court {
   id: ID!
   name: String!
-  address: String!
+  address: String
   phone: String
   email: String
-  courtNumber: Int!
-  isDeleted: Boolean!
-  staff: [CourtStaff!]!
-  documentList: [DocumentList!]!
-  document: [Document!]!
+  courtNumber: Int
+
+  # 👇 MỚI: Danh sách nhân sự của tòa này (Để hiển thị dropdown chọn)
+  officials: [CourtOfficial!]!
 }
 
+# 4. OBJECT TRẢ VỀ CHO DASHBOARD (Màn hình 1)
+type CourtStats {
+  id: ID!
+  name: String!
+  address: String
+  waitingCount: Int! # Cột "Số giấy tờ chưa tống đạt"
+  overdueCount: Int! # Cột "Số giấy tờ đến hạn/quá hạn"
+}
+
+type DashboardSummary {
+  totalWaiting: Int! # Tổng chưa tống đạt
+  totalOverdue: Int! # Tổng quá hạn
+  totalStaff: Int! # Nhân viên nhập liệu (Account)
+  totalSecretary: Int! # Thư ký tòa án (CourtOfficial)
+  courts: [CourtStats!]! # Danh sách tòa án ở dưới
+}
+
+# 5. INPUTS (Dữ liệu đầu vào)
+
+input CreateCourtInput {
+  name: String!
+  address: String!
+  courtNumber: Int
+  phone: String
+  email: String
+}
+
+input UpdateOfficialInput {
+  id: ID!
+  name: String
+  title: String
+  phone: String
+}
+
+# 👇 Input tạo nhân sự tòa án (Admin nhập liệu ban đầu)
+input CreateOfficialInput {
+  courtId: String!
+  name: String!
+  title: String
+  phone: String
+}
+
+# 6. QUERY & MUTATION
+
 extend type Query {
-  courts(courtFilter: CourtFilter): [Court!]!
+  # Lấy thống kê Dashboard
+  dashboardStats(year: Int!, searchCourt: String): DashboardSummary!
+
+  # Lấy danh sách tòa án (cho dropdown chọn tòa)
+  courts: [Court!]!
+
+  # Lấy chi tiết 1 tòa (kèm danh sách officials)
   court(id: ID!): Court!
 }
 
-input CourtFilter {
-  startDate: DateTime
-  endDate: DateTime
-  documentStatus: DocumentStatus
-}
+extend type Mutation {
+  # Tạo tòa án mới
+  createCourt(input: CreateCourtInput!): Court!
 
+  # 👇 Tạo nhân sự cho tòa (Để sau này có người mà chọn)
+  createCourtOfficial(input: CreateOfficialInput!): CourtOfficial!
+
+  updateCourtOfficial(input: UpdateOfficialInput!): CourtOfficial!
+  deleteCourtOfficial(id: ID!): Boolean!
+}
