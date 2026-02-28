@@ -6,17 +6,21 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { UnauthorizedException, UseGuards } from '@nestjs/common';
 import { DocumentStatus, Role } from '@prisma/client';
 import { DocumentService } from './document.service.js';
 import { CurrentUser } from '../decorator/current-user.decorator.js';
 import { JwtAuthGuard } from '../guard/jwtAuth.guard.js';
 import { RolesGuard } from '../guard/roles.guard.js';
 import { Roles } from '../decorator/roles.decorator.js';
+import { JwtService } from '@nestjs/jwt';
 
 @Resolver('Document')
 export class DocumentResolver {
-  constructor(private readonly documentService: DocumentService) {}
+  constructor(
+    private readonly documentService: DocumentService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   // --- 1. QUERY ---
 
@@ -118,5 +122,60 @@ export class DocumentResolver {
     @CurrentUser() user: any,
   ) {
     return await this.documentService.createBulkDocuments(inputs, user);
+  }
+
+  // ==========================================
+  // 1. API TẠO LINK (Chỉ Admin mới gọi được)
+  // ==========================================
+  @Mutation('generatePublicImportLink')
+  @UseGuards(JwtAuthGuard)
+  async generatePublicImportLink(
+    @Args('courtId') courtId: string,
+    @CurrentUser() user: any,
+  ) {
+    return await this.documentService.generatePublicImportLink(courtId, user);
+  }
+
+  // ==========================================
+  // 2. API PUBLIC IMPORT (Ai có link là gọi được)
+  // ==========================================
+  @Mutation('publicCreateBulkDocuments')
+  async publicCreateBulkDocuments(
+    @Args('token') token: string,
+    @Args('inputs') inputs: any[],
+  ) {
+    let payload;
+
+    // 1. Giải mã và kiểm tra hạn sử dụng của Token
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (error) {
+      throw new UnauthorizedException(
+        'Link truy cập đã hết hạn (30 phút) hoặc không hợp lệ. Vui lòng xin link mới!',
+      );
+    }
+
+    // 2. Kiểm tra đúng mục đích Token chưa
+    if (payload.purpose !== 'PUBLIC_BULK_IMPORT') {
+      throw new UnauthorizedException('Token sai mục đích sử dụng!');
+    }
+
+    // 3. ÉP KIỂU BẢO MẬT (Ghi đè courtId từ token vào tất cả các dòng)
+    // Để đảm bảo link của tòa án nào thì chỉ import được cho tòa án đó
+    const securedInputs = inputs.map((input) => ({
+      ...input,
+      courtId: payload.courtId,
+    }));
+
+    // 4. Tái sử dụng lại 100% hàm tạo gốc của sếp, truyền creatorId từ token vào
+    // Hệ thống sẽ tự hiểu người tạo là cái ông Admin đã sinh ra cái link này
+    return await this.documentService.createBulkDocuments(securedInputs, {
+      sub: payload.creatorId,
+    });
+  }
+
+  @Query('publicGetOfficials')
+  async publicGetOfficials(@Args('token') token: string) {
+    return await this.documentService.getPublicOfficials(token);
   }
 }

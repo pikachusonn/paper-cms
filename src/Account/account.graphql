@@ -75,9 +75,7 @@ input UpdateAccountInput {
   id: ID! # ID tài khoản cần sửa
   name: String # Update fullName
   phone: String
-  role: Role
   avatar: String
-  # ĐÃ XÓA courtId
 }
 
 # --- QUERY ---

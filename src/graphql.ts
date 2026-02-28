@@ -60,7 +60,6 @@ export interface UpdateAccountInput {
     id: string;
     name?: Nullable<string>;
     phone?: Nullable<string>;
-    role?: Nullable<Role>;
     avatar?: Nullable<string>;
 }
 
@@ -188,6 +187,7 @@ export interface IQuery {
     getDocumentsByCourt(filter: GetDocsFilterInput): DocumentPagination | Promise<DocumentPagination>;
     document(id: string): Document | Promise<Document>;
     getOfficialsByCourt(courtId: string): CourtOfficial[] | Promise<CourtOfficial[]>;
+    publicGetOfficials(token: string): OfficialDropdown[] | Promise<OfficialDropdown[]>;
     getMyNotifications(filter: GetNotificationsFilterInput): NotificationPagination | Promise<NotificationPagination>;
 }
 
@@ -212,6 +212,8 @@ export interface IMutation {
     confirmDocument(id: string): Document | Promise<Document>;
     createMultipleDocuments(inputs: CreateDocumentInput[]): number | Promise<number>;
     createBulkDocuments(inputs: CreateDocumentInput[]): BulkImportResult | Promise<BulkImportResult>;
+    generatePublicImportLink(courtId: string): string | Promise<string>;
+    publicCreateBulkDocuments(token: string, inputs: CreateDocumentInput[]): BulkImportResult | Promise<BulkImportResult>;
     markNotificationAsRead(id: string): Notification | Promise<Notification>;
     markAllNotificationsAsRead(): boolean | Promise<boolean>;
 }
@@ -316,6 +318,12 @@ export interface DocumentPagination {
     limit: number;
     totalPages: number;
     statHeader: CourtDocStats;
+}
+
+export interface OfficialDropdown {
+    id: string;
+    name: string;
+    title?: Nullable<string>;
 }
 
 export interface Notification {

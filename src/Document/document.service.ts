@@ -2,13 +2,18 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DocumentRepository } from './document.repository.js';
 import { Role, DocumentStatus } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class DocumentService {
-  constructor(private readonly documentRepository: DocumentRepository) {}
+  constructor(
+    private readonly documentRepository: DocumentRepository,
+    private readonly jwtService: JwtService,
+  ) {}
 
   /**
    * 1. Lấy danh sách văn bản theo bộ lọc (Dashboard)
@@ -48,8 +53,6 @@ export class DocumentService {
     if (!exist) {
       throw new NotFoundException(`Không tìm thấy văn bản có ID: ${input.id}`);
     }
-
-    // ⛔ LOGIC KHÓA: Đã duyệt thì Staff không được sửa (Chỉ Admin mới có quyền)
     if (
       exist.status === DocumentStatus.CONFIRMED &&
       currentUser.role !== Role.ADMIN
@@ -128,7 +131,7 @@ export class DocumentService {
     const validData: any[] = [];
     const errors: any[] = [];
 
-    // 1. Chuẩn bị dữ liệu để check trùng
+    // 1. Chuẩn bị dữ liệu để check trùng (lấy ID tòa án và Mã văn bản)
     const courtIds = [
       ...new Set(inputs.map((i) => i.courtId).filter(Boolean)),
     ] as string[];
@@ -136,13 +139,13 @@ export class DocumentService {
       ...new Set(inputs.map((i) => i.docCode).filter(Boolean)),
     ] as string[];
 
-    // 2. QUERY 1 LẦN: Lấy cả nhân sự và các mã văn bản đã tồn tại
+    // 2. QUERY 1 LẦN: Lấy danh sách nhân sự VÀ các mã văn bản ĐÃ TỒN TẠI trong DB
     const [officials, existingDocs] = await Promise.all([
       this.documentRepository.findOfficialsByCourtIds(courtIds),
       this.documentRepository.findExistingDocs(docCodes, courtIds),
     ]);
 
-    // 3. Đổ vào Set/Map để tra cứu siêu tốc
+    // 3. Đổ vào Set/Map để tra cứu siêu tốc O(1)
     const officialMap = new Map<string, string>();
     officials.forEach((off) =>
       officialMap.set(
@@ -151,22 +154,28 @@ export class DocumentService {
       ),
     );
 
+    // Set chứa các mã đã có trên Database
     const existingSet = new Set(
       existingDocs.map((d) => `${d.courtId}_${d.docCode}`),
     );
-    const localSeen = new Set(); // Dùng để check trùng ngay trong chính file Excel đang import
+    // Set chứa các mã đang duyệt trong vòng lặp (chống duplicate trong chính file Excel)
+    const localSeen = new Set<string>();
 
-    // 4. Duyệt từng dòng
+    // 4. Duyệt từng dòng để Validate
     inputs.forEach((input, index) => {
       const rowIndex = input._rowIndex ?? index + 2;
       const rowErrors: string[] = [];
 
-      // --- Các validate cơ bản ---
+      // --- Các validate bắt buộc cơ bản ---
       if (!input.docCode) rowErrors.push('Thiếu Mã văn bản');
+      if (!input.docType) rowErrors.push('Thiếu Trích yếu');
+      if (!input.recipient) rowErrors.push('Thiếu Người nhận');
+      if (!input.dueDate) rowErrors.push('Thiếu Hạn tống đạt');
       if (!input.courtId) rowErrors.push('Thiếu Tòa án tiếp nhận');
-      // ... (các validate khác giữ nguyên)
+      if (!input.responsibleOfficialName)
+        rowErrors.push('Thiếu người chịu trách nhiệm');
 
-      // --- 👇 CHECK TRÙNG DỮ LIỆU ---
+      // --- CHECK TRÙNG LẶP MÃ VĂN BẢN ---
       if (input.docCode && input.courtId) {
         const uniqueKey = `${input.courtId}_${input.docCode}`;
 
@@ -176,31 +185,35 @@ export class DocumentService {
             `Mã văn bản "${input.docCode}" đã tồn tại trên hệ thống`,
           );
         }
-        // Kiểm tra trùng ngay trong file Excel (dòng này giống dòng trước đó)
+        // Kiểm tra trùng lặp ngay trong chính file Excel
         else if (localSeen.has(uniqueKey)) {
           rowErrors.push(
             `Mã văn bản "${input.docCode}" bị lặp lại trong file Excel`,
           );
         } else {
-          localSeen.add(uniqueKey); // Đánh dấu mã này đã xuất hiện trong lượt import này
+          // Đánh dấu mã này đã xuất hiện để kiểm tra cho các dòng tiếp theo
+          localSeen.add(uniqueKey);
         }
       }
 
-      // Mapping nhân sự
+      // --- Mapping tên nhân sự sang ID ---
       let mappedOfficialId: string | undefined = undefined;
       if (input.responsibleOfficialName) {
         mappedOfficialId = officialMap.get(
           `${input.courtId}_${input.responsibleOfficialName.toLowerCase().trim()}`,
         );
-        if (!mappedOfficialId)
+        if (!mappedOfficialId) {
           rowErrors.push(
             `Không tìm thấy nhân sự: "${input.responsibleOfficialName}"`,
           );
+        }
       }
 
+      // --- Đánh giá dòng data ---
       if (rowErrors.length > 0) {
         errors.push({ rowIndex, message: rowErrors.join(', ') });
       } else {
+        // Bóc tách loại bỏ các trường thừa (chỉ giữ lại data hợp lệ cho DB)
         const { _rowIndex, responsibleOfficialName, ...cleanPayload } = input;
         validData.push({
           ...cleanPayload,
@@ -210,7 +223,7 @@ export class DocumentService {
       }
     });
 
-    // 5. Lưu Database
+    // 5. Lưu Database những dòng SẠCH
     let successCount = 0;
     if (validData.length > 0) {
       const result =
@@ -219,5 +232,45 @@ export class DocumentService {
     }
 
     return { successCount, errors };
+  }
+
+  /**
+   * TẠO LINK PUBLIC IMPORT (Có hiệu lực 30 phút)
+   */
+  async generatePublicImportLink(courtId: string, currentUser: any) {
+    // 1. Nhét courtId và creatorId vào cục data của Token
+    const payload = {
+      courtId: courtId,
+      creatorId: currentUser.sub,
+      purpose: 'PUBLIC_BULK_IMPORT', // Đánh dấu mục đích để không bị dùng nhầm token khác
+    };
+
+    // 2. Ký token với hạn sử dụng 30 phút
+    const token = this.jwtService.sign(payload, { expiresIn: '30m' });
+
+    // 3. Trả về URL cho FE (Sếp đổi port 3001 thành domain thật của sếp sau này nhé)
+    return `http://localhost:3001/public-import?token=${token}`;
+  }
+
+  async getPublicOfficials(token: string) {
+    let payload;
+
+    // 1. Giải mã token y hệt như lúc Import
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (error) {
+      throw new UnauthorizedException(
+        'Link truy cập đã hết hạn (30 phút) hoặc không hợp lệ.',
+      );
+    }
+
+    // 2. Chốt chặn bảo mật mục đích token
+    if (payload.purpose !== 'PUBLIC_BULK_IMPORT') {
+      throw new UnauthorizedException('Token sai mục đích sử dụng!');
+    }
+
+    // 3. Token ngon nghẻ -> Lấy courtId ra và truy vấn DB
+    const courtId = payload.courtId;
+    return await this.documentRepository.getOfficialsForDropdown(courtId);
   }
 }

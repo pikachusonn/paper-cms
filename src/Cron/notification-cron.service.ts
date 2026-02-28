@@ -14,7 +14,8 @@ export class NotificationCronService {
   ) {}
 
   // @Cron(CronExpression.EVERY_10_SECONDS) // 👈 Bật dòng này lên nếu muốn TEST thử ngay lập tức
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Chạy thật vào 00:00 mỗi đêm
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Chạy thật vào 00:00 mỗi đêm
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async handleUrgentDocuments() {
     this.logger.log('Bắt đầu quét các văn bản sắp hết hạn...');
 

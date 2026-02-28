@@ -82,25 +82,27 @@ export class CourtRepository {
     });
 
     // 3. Tính toán số liệu cho từng tòa
-    // Dùng Promise.all để query song song cho nhanh
     const formattedCourts = await Promise.all(
       courts.map(async (court) => {
-        // Đếm số Waiting trong năm
+        // 👇 SỬA LẠI: Đếm số Đợi tống đạt (Chưa tống đạt VÀ VẪN CÒN HẠN)
         const waitingCount = await this.prisma.document.count({
           where: {
             courtId: court.id,
+            isDeleted: false, // 👈 Bổ sung check xóa mềm
             receivedDate: { gte: startDate, lte: endDate },
             status: 'WAITING',
+            dueDate: { gte: now }, // 👈 CHỐT CHẶN: Hạn phải lớn hơn hoặc bằng hiện tại
           },
         });
 
-        // Đếm số Quá hạn trong năm
+        // 👇 SỬA LẠI: Đếm số Quá hạn (Chưa xong VÀ ĐÃ QUÁ HẠN)
         const overdueCount = await this.prisma.document.count({
           where: {
             courtId: court.id,
+            isDeleted: false, // 👈 Bổ sung check xóa mềm
             receivedDate: { gte: startDate, lte: endDate },
-            status: { notIn: ['COMPLETED', 'CONFIRMED'] }, // Chưa xong
-            dueDate: { lt: now }, // Và đã quá hạn
+            status: { notIn: ['COMPLETED', 'CONFIRMED'] },
+            dueDate: { lt: now },
           },
         });
 

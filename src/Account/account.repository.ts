@@ -143,7 +143,7 @@ export class AccountRepository {
   // --- 5. CẬP NHẬT (UPDATE) ---
 
   async updateAccount(data: IUpdateAccountInput) {
-    const { id, name, phone, avatar, role } = data;
+    const { id, name, phone, avatar } = data;
 
     return await this.prisma.account.update({
       where: { id },
@@ -152,7 +152,6 @@ export class AccountRepository {
         fullName: name, // Map name -> fullName
         phone: phone,
         avatar: avatar,
-        role: role,
       },
     });
   }

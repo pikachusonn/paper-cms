@@ -97,10 +97,6 @@ export class IUpdateAccountInput {
   phone?: string;
 
   @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
-
-  @IsOptional()
   @IsString()
   avatar?: string;
 }
@@ -109,4 +105,28 @@ export interface IUpdateProfileInput {
   fullName?: string;
   phone?: string;
   avatar?: string;
+}
+
+// Định nghĩa cấu trúc Filter đầu vào
+export interface GetAccountsFilter {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+// Định nghĩa Metadata cho phân trang
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Định nghĩa Interface trả về chung (Generic)
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

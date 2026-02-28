@@ -266,4 +266,19 @@ export class DocumentRepository {
       select: { docCode: true, courtId: true }, // Chỉ lấy 2 trường này để check cho nhẹ
     });
   }
+  // --- LẤY DANH SÁCH CÁN BỘ THEO COURT ID (Cho Public Dropdown) ---
+  async getOfficialsForDropdown(courtId: string) {
+    return await this.prisma.courtOfficial.findMany({
+      where: {
+        courtId: courtId,
+        isDeleted: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        title: true, // Nếu DB của ông có trường chức danh, không thì bỏ đi
+      },
+      orderBy: { name: 'asc' }, // Xếp theo tên ABC cho FE dễ tìm
+    });
+  }
 }
