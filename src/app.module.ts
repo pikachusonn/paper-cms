@@ -14,6 +14,7 @@ import { NotificationCronService } from './Cron/notification-cron.service.js';
 import { Prisma } from './generated/prisma/browser.js';
 import { PrismaService } from './service/prisma.service.js';
 import { NotificationModule } from './Notification/notification.module.js';
+import { CourtStaffModule } from './CourtStaff/courtStaff.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -33,6 +34,7 @@ import { NotificationModule } from './Notification/notification.module.js';
     AuthModule,
     AccountModule,
     CourtModule,
+    CourtStaffModule,
     DocumentModule,
   ],
   controllers: [AppController],

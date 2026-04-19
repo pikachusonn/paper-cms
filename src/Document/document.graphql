@@ -75,6 +75,7 @@ type DocumentPagination {
 # Input lọc danh sách
 input GetDocsFilterInput {
   courtId: String!
+  officialId: String
   fromDate: String # Truyền định dạng YYYY-MM-DD
   toDate: String # Truyền định dạng YYYY-MM-DD
   status: DocumentStatus

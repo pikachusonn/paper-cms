@@ -87,6 +87,7 @@ export interface CreateOfficialInput {
 
 export interface GetDocsFilterInput {
     courtId: string;
+    officialId?: Nullable<string>;
     fromDate?: Nullable<string>;
     toDate?: Nullable<string>;
     status?: Nullable<DocumentStatus>;
@@ -183,7 +184,7 @@ export interface IQuery {
     courts(): Court[] | Promise<Court[]>;
     court(id: string): Court | Promise<Court>;
     courtStaffs(): CourtStaff[] | Promise<CourtStaff[]>;
-    courtStaff(id: string): CourtStaff | Promise<CourtStaff>;
+    courtStaff(id: string): Nullable<CourtStaff> | Promise<Nullable<CourtStaff>>;
     getDocumentsByCourt(filter: GetDocsFilterInput): DocumentPagination | Promise<DocumentPagination>;
     document(id: string): Document | Promise<Document>;
     getOfficialsByCourt(courtId: string): CourtOfficial[] | Promise<CourtOfficial[]>;
@@ -262,12 +263,9 @@ export interface CourtStaff {
     court: Court;
     name: string;
     phone?: Nullable<string>;
-    avatar?: Nullable<string>;
-    socialId?: Nullable<string>;
     email?: Nullable<string>;
-    operatingArea: string;
     isDeleted: boolean;
-    document: Document[];
+    responsibleDocs?: Nullable<Nullable<Document>[]>;
 }
 
 export interface Document {

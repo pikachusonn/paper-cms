@@ -15,7 +15,7 @@ export class NotificationCronService {
 
   // @Cron(CronExpression.EVERY_10_SECONDS) // 👈 Bật dòng này lên nếu muốn TEST thử ngay lập tức
   // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Chạy thật vào 00:00 mỗi đêm
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron('0 0,12 * * *')
   async handleUrgentDocuments() {
     this.logger.log('Bắt đầu quét các văn bản sắp hết hạn...');
 
@@ -80,7 +80,7 @@ export class NotificationCronService {
 
     try {
       await this.mailerService.sendMail({
-        to: adminEmails, // Gửi cho mảng list email
+        to: ['tongdatvbpt@gmail.com'], // Gửi cho mảng list email
         subject: `[Hệ thống Tống đạt] Có ${urgentDocs.length} giấy tờ cần xử lý gấp ngày mai!`,
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">

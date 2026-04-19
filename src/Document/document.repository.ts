@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../service/prisma.service.js';
-import * as graphql from '../graphql.js';
 import { Prisma, DocumentStatus } from '@prisma/client';
 
 @Injectable()
@@ -12,7 +11,7 @@ export class DocumentRepository {
     // Dùng any tạm hoặc update lại type GetDocsFilterInput
     const page = filter.page ?? 1;
     const limit = filter.limit ?? 10;
-    const { courtId, fromDate, toDate, status, search } = filter;
+    const { courtId, fromDate, toDate, status, search, officialId } = filter;
     const skip = (page - 1) * limit;
     const now = new Date();
 
@@ -42,6 +41,10 @@ export class DocumentRepository {
 
     if (status) {
       where.status = status as DocumentStatus;
+    }
+
+    if (officialId) {
+      where.responsibleOfficialId = officialId;
     }
 
     if (search) {

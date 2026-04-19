@@ -4,17 +4,13 @@ type CourtStaff {
 
   name: String!
   phone: String
-  avatar: String
-  socialId: String
   email: String
-  operatingArea: String!
-
   isDeleted: Boolean!
-  document: [Document!]!
+  responsibleDocs: [Document]
 }
 
 extend type Query {
   courtStaffs: [CourtStaff!]!
-  courtStaff(id: ID!): CourtStaff!
+  courtStaff(id: ID!): CourtStaff
 }
 

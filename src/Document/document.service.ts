@@ -249,7 +249,7 @@ export class DocumentService {
     const token = this.jwtService.sign(payload, { expiresIn: '30m' });
 
     // 3. Trả về URL cho FE (Sếp đổi port 3001 thành domain thật của sếp sau này nhé)
-    return `http://localhost:3001/public-import?token=${token}`;
+    return `https://paper-cms-client-three.vercel.app/public-import?token=${token}`;
   }
 
   async getPublicOfficials(token: string) {

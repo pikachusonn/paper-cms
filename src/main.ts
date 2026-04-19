@@ -14,7 +14,12 @@ async function bootstrap() {
   app.use(urlencoded({ limit: '100mb', extended: true }));
 
   app.enableCors({
-    origin: ['http://localhost:3001'],
+    origin: [
+      'https://paper-cms-client.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://paper-cms-client-three.vercel.app',
+    ],
     credentials: true,
   });
 
@@ -37,7 +42,7 @@ async function bootstrap() {
   );
 
   // app.useGlobalFilters(new GqlGlobalExceptionFilter());
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 
 void bootstrap();
